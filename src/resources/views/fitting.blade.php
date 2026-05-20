@@ -1,30 +1,54 @@
 @extends('web::layouts.grids.4-4-4')
 
-@section('title', trans('fitting::fitting.page_title'))
-@section('page_header', trans('fitting::fitting.page_title'))
+@section('title', trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title'))
+@section('page_header', trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title'))
 
 @section('left')
     <div class="card card-primary card-solid">
         <div class="card-header">
-            <h3 class="card-title">{{trans('fitting::fitting.list_title')}}</h3>
-            @can('fitting.create')
-                <div class="card-tools pull-right">
-                    <button type="button" class="btn btn-xs btn-tool" id="addFitting" data-toggle="tooltip"
-                            data-placement="top" title="{{trans('fitting::fitting.add_new_fitting_tooltip')}}">
-                        <span class="fa fa-plus-square"></span>
-                    </button>
-                </div>
-            @endcan
+            <h3 class="card-title">{{trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title')}}</h3>
+            @if($manage ?? false)
+                @can('fitting.create')
+                    <div class="card-tools pull-right">
+                        <button type="button" class="btn btn-xs btn-tool" id="addFitting" data-toggle="tooltip"
+                                data-placement="top" title="{{trans('fitting::fitting.add_new_fitting_tooltip')}}">
+                            <span class="fa fa-plus-square"></span>
+                        </button>
+                    </div>
+                @endcan
+            @endif
         </div>
         <div class="card-body px-2">
+            @unless($manage ?? false)
+                <div class="form-group">
+                    <label for="personalCheckMode">{{trans('fitting::fitting.check_mode_label')}}</label>
+                    <select id="personalCheckMode" class="form-control form-control-sm">
+                        <option value="single">{{trans('fitting::fitting.check_mode_single')}}</option>
+                        <option value="group">{{trans('fitting::fitting.check_mode_group')}}</option>
+                    </select>
+                </div>
+                <div class="form-group" id="personalDoctrineCheckBox">
+                    <label for="personalDoctrineCheck">{{trans('fitting::fitting.check_group_label')}}</label>
+                    <select id="personalDoctrineCheck" class="form-control form-control-sm">
+                        <option value="">{{trans('fitting::fitting.check_group_placeholder')}}</option>
+                        @foreach($doctrine_list as $doctrine)
+                            <option value="{{$doctrine['id']}}">{{$doctrine['name']}}</option>
+                        @endforeach
+                    </select>
+                    <button type="button" id="runPersonalDoctrineCheck" class="btn btn-info btn-sm btn-block mt-2">
+                        {{trans('fitting::fitting.run_group_check_btn')}}
+                    </button>
+                </div>
+            @endunless
+
             <!-- Search Filters -->
-            <div class="row mb-3">
+            <div class="row mb-3" id="fittingSearchFilters">
                 <div class="col-md-6">
                     <div class="input-group input-group-sm">
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-rocket"></i></span>
                         </div>
-                        <input type="text" id="searchShip" class="form-control" placeholder="Search by ship type...">
+                        <input type="text" id="searchShip" class="form-control" placeholder="{{trans('fitting::fitting.search_ship_placeholder')}}">
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -32,7 +56,7 @@
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-file-signature"></i></span>
                         </div>
-                        <input type="text" id="searchFitName" class="form-control" placeholder="Search by fit name...">
+                        <input type="text" id="searchFitName" class="form-control" placeholder="{{trans('fitting::fitting.search_fit_placeholder')}}">
                     </div>
                 </div>
             </div>
@@ -61,18 +85,20 @@
                                         title="{{trans('fitting::fitting.view_fitting_tooltip')}}">
                                     <span class="fa fa-eye text-white"></span>
                                 </button>
-                                @can('fitting.create')
-                                    <button type="button" id="editfit" class="btn btn-xs btn-warning"
-                                            data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
-                                            title="{{trans('fitting::fitting.edit_fitting_tooltip')}}">
-                                        <span class="fas fa-edit text-white"></span>
-                                    </button>
-                                    <button type="button" id="deletefit" class="btn btn-xs btn-danger"
-                                            data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
-                                            title="{{trans('fitting::fitting.delete_fitting_tooltip')}}">
-                                        <span class="fa fa-trash text-white"></span>
-                                    </button>
-                                @endcan
+                                @if($manage ?? false)
+                                    @can('fitting.create')
+                                        <button type="button" id="editfit" class="btn btn-xs btn-warning"
+                                                data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
+                                                title="{{trans('fitting::fitting.edit_fitting_tooltip')}}">
+                                            <span class="fas fa-edit text-white"></span>
+                                        </button>
+                                        <button type="button" id="deletefit" class="btn btn-xs btn-danger"
+                                                data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
+                                                title="{{trans('fitting::fitting.delete_fitting_tooltip')}}">
+                                            <span class="fa fa-trash text-white"></span>
+                                        </button>
+                                    @endcan
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -100,6 +126,12 @@
     <script type="application/javascript">
         $('#exportLinks').hide();
 
+        window.fittingManageMode = {{ ($manage ?? false) ? 'true' : 'false' }};
+        window.fittingCustomSkillLabel = "{{trans('fitting::fitting.custom_skill_type_id_label')}}";
+        window.fittingMinimumLabel = "{{trans('fitting::fitting.minimum_requirements_title')}}";
+        window.fittingAdvancedLabel = "{{trans('fitting::fitting.advanced_requirements_title')}}";
+        window.fittingNoAdvancedLabel = "{{trans('fitting::fitting.no_advanced_requirements')}}";
+
         // Initialize DataTable with search functionality
         var fittingTable = $('#fitlist').DataTable({
             "paging": true,
@@ -123,13 +155,13 @@
                 }
             ],
             "language": {
-                "search": "Search all:",
-                "lengthMenu": "Show _MENU_ fittings",
-                "info": "Showing _START_ to _END_ of _TOTAL_ fittings",
-                "infoEmpty": "No fittings available",
-                "infoFiltered": "(filtered from _MAX_ total fittings)",
-                "zeroRecords": "No matching fittings found",
-                "emptyTable": "No fittings available"
+                "search": "{{trans('fitting::fitting.datatable_search')}}",
+                "lengthMenu": "{{trans('fitting::fitting.datatable_length')}}",
+                "info": "{{trans('fitting::fitting.datatable_info')}}",
+                "infoEmpty": "{{trans('fitting::fitting.datatable_info_empty')}}",
+                "infoFiltered": "{{trans('fitting::fitting.datatable_info_filtered')}}",
+                "zeroRecords": "{{trans('fitting::fitting.datatable_zero_records')}}",
+                "emptyTable": "{{trans('fitting::fitting.datatable_empty')}}"
             },
             "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>rt<"row"<"col-sm-6"i><"col-sm-6"p>>'
         });

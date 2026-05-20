@@ -4,28 +4,29 @@ namespace CryptaTech\Seat\Fitting\Http\Controllers;
 
 use CryptaTech\Seat\Fitting\Events\DoctrineUpdated;
 use CryptaTech\Seat\Fitting\Events\FittingUpdated;
-use CryptaTech\Seat\Fitting\Helpers\CalculateConstants;
-use CryptaTech\Seat\Fitting\Helpers\CalculateEft;
 use CryptaTech\Seat\Fitting\Models\Doctrine;
 use CryptaTech\Seat\Fitting\Models\Fitting;
-use CryptaTech\Seat\Fitting\Models\FittingItem;
+use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
+use CryptaTech\Seat\Fitting\Services\CorporationSkillReportService;
+use CryptaTech\Seat\Fitting\Services\PersonalSkillCheckService;
+use CryptaTech\Seat\Fitting\Services\SkillRequirementSyncService;
 use CryptaTech\Seat\Fitting\Validation\DoctrineValidation;
 use CryptaTech\Seat\Fitting\Validation\FittingValidation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Character\CharacterAffiliation;
-use Seat\Eveapi\Models\Character\CharacterInfo;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
-use Seat\Eveapi\Models\Sde\DgmTypeAttribute;
 use Seat\Eveapi\Models\Sde\InvType;
 use Seat\Web\Http\Controllers\Controller;
 
-class FittingController extends Controller implements CalculateConstants
+class FittingController extends Controller
 {
-    use CalculateEft;
-
-    private $requiredSkills = [];
+    public function __construct(
+        private PersonalSkillCheckService $personalSkillCheck,
+        private SkillRequirementSyncService $skillRequirementSync,
+        private CorporationSkillReportService $corporationSkillReport,
+    ) {}
 
     public function getDoctrineEdit($doctrine_id)
     {
@@ -119,43 +120,16 @@ class FittingController extends Controller implements CalculateConstants
 
     public function getSkillsByFitId($id)
     {
-        $characters = [];
-        $skillsToons = [];
+        $fitting = Fitting::findOrFail($id);
 
-        $fitting = Fitting::find($id);
-        $skillsToons['skills'] = $this->calculate($fitting);
-        $skilledCharacters = CharacterInfo::with('skills')->whereIn('character_id', auth()->user()->associatedCharacterIds())->get();
+        return response()->json($this->personalSkillCheck->checkForCurrentUser($fitting));
+    }
 
-        foreach ($skilledCharacters as $character) {
+    public function getSkillsByDoctrineId($id)
+    {
+        $doctrine = Doctrine::findOrFail($id);
 
-            $index = $character->character_id;
-
-            $skillsToons['characters'][$index]['id'] = $character->character_id;
-            $skillsToons['characters'][$index]['name'] = $character->name;
-
-            foreach ($character->skills as $skill) {
-
-                $rank = DgmTypeAttribute::where('typeID', $skill->skill_id)->where('attributeID', '275')->first();
-
-                $skillsToons['characters'][$index]['skill'][$skill->skill_id]['level'] = $skill->trained_skill_level;
-                $skillsToons['characters'][$index]['skill'][$skill->skill_id]['rank'] = $rank ? $rank->valueFloat : 1;
-            }
-
-            // Fill in missing skills so Javascript doesn't barf and you have the correct rank
-            foreach ($skillsToons['skills'] as $skill) {
-
-                if (isset($skillsToons['characters'][$index]['skill'][$skill['typeId']])) {
-                    continue;
-                }
-
-                $rank = DgmTypeAttribute::where('typeID', $skill['typeId'])->where('attributeID', '275')->first();
-
-                $skillsToons['characters'][$index]['skill'][$skill['typeId']]['level'] = 0;
-                $skillsToons['characters'][$index]['skill'][$skill['typeId']]['rank'] = $rank ? $rank->valueFloat : 1;
-            }
-        }
-
-        return json_encode($skillsToons);
+        return response()->json($this->personalSkillCheck->checkDoctrineForCurrentUser($doctrine));
     }
 
     protected function getFittings()
@@ -187,14 +161,14 @@ class FittingController extends Controller implements CalculateConstants
 
     public function getEftFittingById($id)
     {
-        $fitting = Fitting::find($id);
+        $fitting = Fitting::findOrFail($id);
 
         return $fitting->toEve();
     }
 
     public function getFittingById($id)
     {
-        $fitting = Fitting::find($id);
+        $fitting = Fitting::findOrFail($id);
 
         $response = $this->fittingParser($fitting);
 
@@ -210,8 +184,26 @@ class FittingController extends Controller implements CalculateConstants
 
     public function getFittingView()
     {
-        $corps = [];
         $fitlist = $this->getFittingList();
+        $corps = $this->getVisibleCorporations();
+        $doctrine_list = $this->getDoctrineList();
+        $manage = false;
+
+        return view('fitting::fitting', compact('fitlist', 'corps', 'doctrine_list', 'manage'));
+    }
+
+    public function getManageView()
+    {
+        $fitlist = $this->getFittingList();
+        $corps = $this->getVisibleCorporations();
+        $manage = true;
+
+        return view('fitting::fitting', compact('fitlist', 'corps', 'manage'));
+    }
+
+    private function getVisibleCorporations(): array
+    {
+        $corps = [];
 
         if (Gate::allows('global.superuser')) {
             $corpnames = CorporationInfo::all();
@@ -224,7 +216,7 @@ class FittingController extends Controller implements CalculateConstants
             $corps[$corp->corporation_id] = $corp->name;
         }
 
-        return view('fitting::fitting', compact('fitlist', 'corps'));
+        return $corps;
     }
 
     public function getDoctrineView($doctrine_id = null)
@@ -244,19 +236,21 @@ class FittingController extends Controller implements CalculateConstants
             $fit = Fitting::createFromEve($request->eftfitting);
         }
 
+        $this->skillRequirementSync->syncCalculatedMinimumRequirements($fit);
+
         // dispatch an event so other plugins know that a fitting has updated
         FittingUpdated::dispatch($fit);
 
         $fitlist = $this->getFittingList();
+        $corps = $this->getVisibleCorporations();
+        $manage = true;
 
-        return view('fitting::fitting', compact('fitlist'));
+        return view('fitting::fitting', compact('fitlist', 'corps', 'manage'));
     }
 
     public function postFitting(FittingValidation $request)
     {
-        $eft = $request->input('eftfitting');
-
-        return response()->json($this->fittingParser($eft));
+        abort(410);
     }
 
     private function fittingParser($fit)
@@ -294,68 +288,47 @@ class FittingController extends Controller implements CalculateConstants
 
     public function postSkills(FittingValidation $request)
     {
-        $skillsToons = [];
-        $fitting = $request->input('eftfitting');
-        $skillsToons['skills'] = $this->calculate($fitting);
-
-        $characters = $this->getUserCharacters(auth()->user()->id);
-
-        foreach ($characters as $character) {
-            $index = $character->characterID;
-
-            $skillsToons['characters'][$index] = [
-                'id' => $character->characterID,
-                'name' => $character->characterName,
-            ];
-
-            //            $characterSkills = $this->getCharacterSkillsInformation($character->characterID);
-            $characterSkills = CharacterInfo::with('skills')->where('character_id', $character->characterID)->get();
-
-            foreach ($characterSkills as $skill) {
-                $rank = DgmTypeAttributes::where('typeID', $skill->typeID)->where('attributeID', '275')->first();
-
-                $skillsToons['characters'][$index]['skill'][$skill->typeID] = [
-                    'level' => $skill->level,
-                    'rank' => $rank->valueFloat,
-                ];
-            }
-
-            // Fill in missing skills so Javascript doesn't barf and you have the correct rank
-            foreach ($skillsToons['skills'] as $skill) {
-
-                if (isset($skillsToons['characters'][$index]['skill'][$skill['typeId']])) {
-                    continue;
-                }
-
-                $rank = DgmTypeAttributes::where('typeID', $skill['typeId'])->where('attributeID', '275')->first();
-
-                $skillsToons['characters'][$index]['skill'][$skill['typeId']] = [
-                    'level' => 0,
-                    'rank' => $rank->valueFloat,
-                ];
-            }
-        }
-
-        return response()->json($skillsToons);
+        abort(410);
     }
 
-    private function getSkillNames($types)
+    public function getFittingRequirements($id)
     {
-        $skills = [];
+        $fitting = Fitting::findOrFail($id);
 
-        foreach ($types as $skill_id => $level) {
-            $res = InvType::where('typeID', $skill_id)->first();
+        return response()->json([
+            'minimum' => $this->personalSkillCheck->requirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM),
+            'advanced' => $this->personalSkillCheck->requirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED),
+        ]);
+    }
 
-            $skills[] = [
-                'typeId' => $skill_id,
-                'typeName' => $res->typeName,
-                'level' => $level,
-            ];
-        }
+    public function saveFittingRequirements(Request $request, $id)
+    {
+        $request->validate([
+            'minimum' => 'array',
+            'minimum.*.skill_type_id' => 'required|integer',
+            'minimum.*.level' => 'required|integer|min:1|max:5',
+            'minimum.*.source' => 'nullable|string',
+            'minimum.*.notes' => 'nullable|string',
+            'advanced' => 'array',
+            'advanced.*.skill_type_id' => 'required|integer',
+            'advanced.*.level' => 'required|integer|min:1|max:5',
+            'advanced.*.source' => 'nullable|string',
+            'advanced.*.notes' => 'nullable|string',
+        ]);
 
-        ksort($skills);
+        $fitting = Fitting::findOrFail($id);
+        $minimum = $request->input('minimum', []);
+        $advanced = $request->input('advanced', []);
+        $requirements = collect($minimum)->merge($advanced);
+        $skillIds = $requirements->pluck('skill_type_id')->unique()->values()->all();
+        $knownSkillIds = InvType::whereIn('typeID', $skillIds)->pluck('typeID')->all();
 
-        return $skills;
+        abort_if(count($knownSkillIds) !== count($skillIds), 422, 'Unknown skill type id.');
+
+        $this->skillRequirementSync->replaceRequirements($fitting, FittingSkillRequirement::TIER_MINIMUM, $minimum);
+        $this->skillRequirementSync->replaceRequirements($fitting, FittingSkillRequirement::TIER_ADVANCED, $advanced);
+
+        return $this->getFittingRequirements($id);
     }
 
     public function saveDoctrine(DoctrineValidation $request)
@@ -407,107 +380,10 @@ class FittingController extends Controller implements CalculateConstants
             'doctrine' => 'required|integer',
         ]);
 
-        $alliance_ids = $request->alliances;
-        $corporation_ids = $request->corporations;
-        $doctrine_id = $request->doctrine;
-
-        $characters = CharacterInfo::with('skills')->whereHas('affiliation', function ($affiliation) use ($corporation_ids, $alliance_ids) {
-            if (count($alliance_ids) > 0) {
-                $affiliation
-                    ->whereIn('alliance_id', $alliance_ids);
-            }
-            if (count($corporation_ids) > 0) {
-                $affiliation
-                    ->whereIn('corporation_id', $corporation_ids);
-            }
-        })->get();
-
-        $doctrine = Doctrine::where('id', $doctrine_id)->first();
-        $fittings = $doctrine->fittings;
-        $charData = [];
-        $fitData = [];
-        $data = [];
-        $data['fittings'] = [];
-        $data['totals'] = [];
-        foreach ($characters as $character) {
-            $charData[$character->character_id]['name'] = $character->name;
-            $charData[$character->character_id]['skills'] = [];
-
-            foreach ($character->skills as $skill) {
-                $charData[$character->character_id]['skills'][$skill->skill_id] = $skill->trained_skill_level;
-            }
-        }
-
-        foreach ($fittings as $fitting) {
-            $fit = Fitting::find($fitting->fitting_id);
-
-            array_push($data['fittings'], $fit->name);
-
-            $this->requiredSkills = [];
-            $shipSkills = $this->calculateIndividual($fit->ship_type_id);
-
-            foreach ($shipSkills as $shipSkill) {
-                $fitData[$fitting->fitting_id]['shipskills'][$shipSkill['typeId']] = $shipSkill['level'];
-            }
-
-            $this->requiredSkills = [];
-            $fitSkills = $this->calculate($fit);
-            $fitData[$fitting->fitting_id]['name'] = $fit->name;
-
-            foreach ($fitSkills as $fitSkill) {
-                $fitData[$fitting->fitting_id]['skills'][$fitSkill['typeId']] = $fitSkill['level'];
-            }
-        }
-
-        foreach ($charData as $char) {
-
-            foreach ($fitData as $fit) {
-                $canflyfit = true;
-                $canflyship = true;
-
-                foreach ($fit['skills'] as $skill_id => $level) {
-                    if (isset($char['skills'][$skill_id])) {
-                        if ($char['skills'][$skill_id] < $level) {
-                            $canflyfit = false;
-                        }
-                    } else {
-                        $canflyfit = false;
-                    }
-                }
-
-                foreach ($fit['shipskills'] as $skill_id => $level) {
-                    if (isset($char['skills'][$skill_id])) {
-                        if ($char['skills'][$skill_id] < $level) {
-                            $canflyship = false;
-                        }
-                    } else {
-                        $canflyship = false;
-                    }
-                }
-
-                if (! isset($data['totals'][$fit['name']]['ship'])) {
-                    $data['totals'][$fit['name']]['ship'] = 0;
-                }
-                if (! isset($data['totals'][$fit['name']]['fit'])) {
-                    $data['totals'][$fit['name']]['fit'] = 0;
-                }
-
-                $data['chars'][$char['name']][$fit['name']]['ship'] = false;
-                if ($canflyship) {
-                    $data['chars'][$char['name']][$fit['name']]['ship'] = true;
-                    $data['totals'][$fit['name']]['ship']++;
-                }
-
-                $data['chars'][$char['name']][$fit['name']]['fit'] = false;
-                if ($canflyfit) {
-                    $data['chars'][$char['name']][$fit['name']]['fit'] = true;
-                    $data['totals'][$fit['name']]['fit']++;
-                }
-            }
-        }
-
-        $data['totals']['chars'] = count($charData);
-
-        return response()->json($data);
+        return response()->json($this->corporationSkillReport->run(
+            $request->alliances,
+            $request->corporations,
+            $request->doctrine,
+        ));
     }
 }

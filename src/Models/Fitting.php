@@ -98,6 +98,24 @@ class Fitting extends Model
             ]);
     }
 
+    public function skillRequirements()
+    {
+        return $this->hasMany(FittingSkillRequirement::class, 'fitting_id', 'fitting_id')
+            ->where('is_active', true);
+    }
+
+    public function minimumSkillRequirements()
+    {
+        return $this->skillRequirements()
+            ->where('tier', FittingSkillRequirement::TIER_MINIMUM);
+    }
+
+    public function advancedSkillRequirements()
+    {
+        return $this->skillRequirements()
+            ->where('tier', FittingSkillRequirement::TIER_ADVANCED);
+    }
+
     /**
      * @return \Illuminate\Support\Collection
      */

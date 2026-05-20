@@ -87,7 +87,7 @@
             sorter: data => data.sort((a, b) => a.text.localeCompare(b.text)),
             placeholder: {
                 value: 0,
-                text: "Choose Doctrine...."
+                text: "{{trans('fitting::doctrine.select_doctrine_option')}}"
             },
         });
 
@@ -148,7 +148,7 @@
                             row = "<tr><td><img src='https://images.evetech.net/types/" + result[fitting].shipImg + "/icon?size=32' height='24' /></td>";
                             row = row + "<td>" + result[fitting].shipType + "</td>";
                             row = row + "<td>" + result[fitting].name + "</td>";
-                            row = row + "<td><button type='button' id='viewfit' class='btn btn-xs btn-success pull-right' data-id='" + result[fitting].id + "' data-toggle='tooltip' data-placement='top' title='View Fitting'>";
+                            row = row + "<td><button type='button' id='viewfit' class='btn btn-xs btn-success pull-right' data-id='" + result[fitting].id + "' data-toggle='tooltip' data-placement='top' title='{{trans('fitting::fitting.view_fitting_tooltip')}}'>";
                             row = row + "<span class='fa fa-eye text-white'></span></button></td></tr>";
                             $('#fitlist').find("tbody").append(row);
                         }

@@ -27,4 +27,19 @@ return [
         'description' => 'fitting::config.permission_view_reports_desc',
         'division' => 'military',
     ],
+    'manage' => [
+        'label' => 'fitting::config.permission_manage_fitting_label',
+        'description' => 'fitting::config.permission_manage_fitting_desc',
+        'division' => 'military',
+    ],
+    'corporation_report' => [
+        'label' => 'fitting::config.permission_corporation_report_label',
+        'description' => 'fitting::config.permission_corporation_report_desc',
+        'division' => 'military',
+    ],
+    'fleet_review' => [
+        'label' => 'fitting::config.permission_fleet_review_label',
+        'description' => 'fitting::config.permission_fleet_review_desc',
+        'division' => 'military',
+    ],
 ];

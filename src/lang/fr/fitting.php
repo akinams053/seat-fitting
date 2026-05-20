@@ -1,45 +1,78 @@
 <?php
 
 return [
-    'page_title' => 'Gestion des fittings',
+    'page_title' => 'Contrôle personnel de fitting',
+    'manage_page_title' => 'Saisie de fitting',
     'list_title' => 'Fittings',
+
+    'check_mode_label' => 'Mode de contrôle',
+    'check_mode_single' => 'Fitting unique',
+    'check_mode_group' => 'Groupe de fittings',
+    'check_group_label' => 'Groupe de fittings',
+    'check_group_placeholder' => 'Choisir le groupe de fittings à contrôler...',
+    'run_group_check_btn' => 'Contrôler ce groupe',
 
     'add_new_fitting_tooltip' => 'Ajouter un nouveau fitting',
 
     'col_ship_type' => 'Vaisseau',
-    'col_fit_name' => 'Nom de Fit',
+    'col_fit_name' => 'Nom du fit',
     'col_options' => 'Options',
 
-    'fitting_icon_alt' => 'Icone de Vaisseau',
+    'search_ship_placeholder' => 'Rechercher par type de vaisseau...',
+    'search_fit_placeholder' => 'Rechercher par nom de fit...',
+    'datatable_search' => 'Recherche globale :',
+    'datatable_length' => 'Afficher _MENU_ fittings',
+    'datatable_info' => 'Affichage de _START_ à _END_ sur _TOTAL_ fittings',
+    'datatable_info_empty' => 'Aucun fitting disponible',
+    'datatable_info_filtered' => '(filtré depuis _MAX_ fittings)',
+    'datatable_zero_records' => 'Aucun fitting correspondant',
+    'datatable_empty' => 'Aucun fitting disponible',
 
-    'view_fitting_tooltip' => 'Voir le Fitting',
-    'edit_fitting_tooltip' => 'Editer le Fitting',
-    'delete_fitting_tooltip' => 'Supprimer le Fitting',
+    'fitting_icon_alt' => 'Icône du vaisseau',
+
+    'view_fitting_tooltip' => 'Voir le fitting',
+    'edit_fitting_tooltip' => 'Modifier le fitting',
+    'delete_fitting_tooltip' => 'Supprimer le fitting',
 
     'eft_fitting_title' => 'Fitting EFT',
 
-    'edit_fitting_modal_title' => 'Etes vous sûr?',
-    'edit_fitting_body' => 'Couper et coller le fitting EFT in the box below dans la case ci-dessous',
+    'edit_fitting_modal_title' => 'Êtes-vous sûr ?',
+    'edit_fitting_body' => 'Copiez-collez le fitting EFT dans la zone ci-dessous',
 
-    'delete_fitting_modal_title' => 'Etes vous sûr ?',
-    'delete_fitting_modal_body' => 'Etes vous certain de vouloir supprimer ce fitting?',
+    'delete_fitting_modal_title' => 'Êtes-vous sûr ?',
+    'delete_fitting_modal_body' => 'Voulez-vous vraiment supprimer ce fitting ?',
 
-    'fit_low_slot_title' => 'Modules Low Slot',
-    'fit_mid_slot_title' => 'Modules Mid Slot',
-    'fit_high_slot_title' => 'Modules High Slot',
+    'fit_low_slot_title' => 'Modules low slot',
+    'fit_mid_slot_title' => 'Modules mid slot',
+    'fit_high_slot_title' => 'Modules high slot',
     'fit_rigs_title' => 'Rigs',
-    'fit_subsystems_title' => 'Sous-Systèles',
+    'fit_subsystems_title' => 'Sous-systèmes',
     'fit_drone_bay_title' => 'Baie de drones',
     'fit_drone_bay_number' => 'Nombre',
 
-    'required_skills_title' => 'Compétences requises',
+    'required_skills_title' => 'Contrôle de compétences',
+    'minimum_requirements_title' => 'Exigences minimales',
+    'advanced_requirements_title' => 'Exigences avancées',
+    'custom_requirements_title' => 'Compétences personnalisées',
+    'manage_requirements_title' => 'Gérer les exigences de compétences',
     'skills_required_level_header' => 'Niveau requis',
     'skills_required_exceeded_header' => 'Dépassé',
     'skills_required_missing_level_header' => 'Niveau manquant',
-    'skills_required_empty_level_header' => 'Niveau manquant',
+    'skills_required_empty_level_header' => 'Niveau vide',
 
     'skill_name_header' => 'Nom de compétence',
     'skill_level_header' => 'Niveau',
+    'skill_current_level_header' => 'Niveau actuel',
+    'skill_required_level_header' => 'Niveau requis',
+    'skill_missing_header' => 'Manquant',
+
+    'requirement_source_calculated' => 'Calculé',
+    'requirement_source_manual' => 'Manuel',
+    'requirement_source_custom' => 'Personnalisé',
+    'custom_skill_type_id_label' => 'Skill Type ID',
+    'add_custom_skill_btn' => 'Ajouter une compétence avancée',
+    'save_requirements_btn' => 'Enregistrer les exigences',
+    'no_advanced_requirements' => 'Aucune exigence avancée configurée.',
 
     'no_character_selected' => 'Aucun personnage sélectionné !',
 ];

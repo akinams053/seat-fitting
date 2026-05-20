@@ -45,14 +45,29 @@ Route::group([
             'uses' => 'FittingController@postSkills',
             'middleware' => 'can:fitting.view',
         ]);
+        Route::get('/manage', [
+            'as' => 'cryptafitting::manage',
+            'uses' => 'FittingController@getManageView',
+            'middleware' => 'can:fitting.create',
+        ]);
         Route::post('/savefitting', [
             'as' => 'cryptafitting::saveFitting',
             'uses' => 'FittingController@saveFitting',
             'middleware' => 'can:fitting.create',
         ]);
+        Route::get('/{id}/requirements', [
+            'as' => 'cryptafitting::requirements',
+            'uses' => 'FittingController@getFittingRequirements',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::post('/{id}/requirements', [
+            'as' => 'cryptafitting::saveRequirements',
+            'uses' => 'FittingController@saveFittingRequirements',
+            'middleware' => 'can:fitting.create',
+        ]);
         Route::get('/getfittingbyid/{id}', [
             'uses' => 'FittingController@getFittingById',
-            'middleware' => 'can:fitting.doctrineview',
+            'middleware' => 'can:fitting.view',
         ]);
         Route::get('/getdoctrinebyid/{id}', [
             'as' => 'cryptafitting::getDoctrineById',
@@ -65,7 +80,11 @@ Route::group([
         ]);
         Route::get('/getskillsbyfitid/{id}', [
             'uses' => 'FittingController@getSkillsByFitId',
-            'middleware' => 'can:fitting.doctrineview',
+            'middleware' => 'can:fitting.view',
+        ]);
+        Route::get('/getskillsbydoctrineid/{id}', [
+            'uses' => 'FittingController@getSkillsByDoctrineId',
+            'middleware' => 'can:fitting.view',
         ]);
         Route::get('/delfittingbyid/{id}', [
             'uses' => 'FittingController@deleteFittingById',

@@ -2,23 +2,31 @@
 
 return [
     'doctrine' => [
-        'name' => 'Doctrines & Fittings',
+        'name' => 'Fitting Checks',
         'label' => 'fitting::config.menu_title',
-        'permission' => 'fitting.doctrineview',
+        'permission' => 'fitting.view',
         'route_segment' => 'fitting',
         'icon' => 'fas fa-rocket',
         'entries' => [
             'fitting' => [
                 'label' => 'fitting::config.menu_fitting',
-                'name' => 'Fittings',
+                'name' => 'Personal Fitting Check',
                 'icon' => 'fas fa-rocket',
                 'route_segment' => 'fitting',
                 'route' => 'cryptafitting::view',
                 'permission' => 'fitting.view',
             ],
+            'manage' => [
+                'label' => 'fitting::config.menu_fitting_manage',
+                'name' => 'Fitting Management',
+                'icon' => 'fas fa-edit',
+                'route_segment' => 'fitting',
+                'route' => 'cryptafitting::manage',
+                'permission' => 'fitting.create',
+            ],
             'doctrine' => [
                 'label' => 'fitting::config.menu_doctrines',
-                'name' => 'Doctrine',
+                'name' => 'Fitting Groups',
                 'icon' => 'fas fa-list',
                 'route_segment' => 'fitting',
                 'route' => 'cryptafitting::doctrineview',
@@ -26,7 +34,7 @@ return [
             ],
             'doctrinereport' => [
                 'label' => 'fitting::config.menu_doctrine_report',
-                'name' => 'Doctrine Report',
+                'name' => 'Corporation Skill Check',
                 'icon' => 'fas fa-chart-pie',
                 'route_segment' => 'fitting',
                 'route' => 'cryptafitting::doctrinereport',

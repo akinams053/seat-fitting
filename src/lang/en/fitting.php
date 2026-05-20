@@ -1,14 +1,32 @@
 <?php
 
 return [
-    'page_title' => 'Fitting Management',
+    'page_title' => 'Personal Fitting Check',
+    'manage_page_title' => 'Fitting Entry',
     'list_title' => 'Fittings',
+
+    'check_mode_label' => 'Check Mode',
+    'check_mode_single' => 'Single Fitting',
+    'check_mode_group' => 'Fitting Group',
+    'check_group_label' => 'Fitting Group',
+    'check_group_placeholder' => 'Choose fitting group to check...',
+    'run_group_check_btn' => 'Check This Group',
 
     'add_new_fitting_tooltip' => 'Add a new fitting',
 
     'col_ship_type' => 'Ship',
     'col_fit_name' => 'Fit Name',
     'col_options' => 'Options',
+
+    'search_ship_placeholder' => 'Search by ship type...',
+    'search_fit_placeholder' => 'Search by fit name...',
+    'datatable_search' => 'Search all:',
+    'datatable_length' => 'Show _MENU_ fittings',
+    'datatable_info' => 'Showing _START_ to _END_ of _TOTAL_ fittings',
+    'datatable_info_empty' => 'No fittings available',
+    'datatable_info_filtered' => '(filtered from _MAX_ total fittings)',
+    'datatable_zero_records' => 'No matching fittings found',
+    'datatable_empty' => 'No fittings available',
 
     'fitting_icon_alt' => 'Ship Icon',
 
@@ -19,7 +37,7 @@ return [
     'eft_fitting_title' => 'EFT Fitting',
 
     'edit_fitting_modal_title' => 'Are you sure?',
-    'edit_fitting_body' => 'Cut and Paste EFT fitting in the box below',
+    'edit_fitting_body' => 'Cut and paste the EFT fitting in the box below',
 
     'delete_fitting_modal_title' => 'Are you sure?',
     'delete_fitting_modal_body' => 'Are you sure you want to delete this fitting?',
@@ -32,7 +50,11 @@ return [
     'fit_drone_bay_title' => 'Drone Bay',
     'fit_drone_bay_number' => 'Number',
 
-    'required_skills_title' => 'Required Skills',
+    'required_skills_title' => 'Skill Check',
+    'minimum_requirements_title' => 'Minimum Requirements',
+    'advanced_requirements_title' => 'Advanced Requirements',
+    'custom_requirements_title' => 'Custom Skills',
+    'manage_requirements_title' => 'Manage Skill Requirements',
     'skills_required_level_header' => 'Required Level',
     'skills_required_exceeded_header' => 'Exceeded',
     'skills_required_missing_level_header' => 'Missing Level',
@@ -40,6 +62,17 @@ return [
 
     'skill_name_header' => 'Skill Name',
     'skill_level_header' => 'Level',
+    'skill_current_level_header' => 'Current Level',
+    'skill_required_level_header' => 'Required Level',
+    'skill_missing_header' => 'Missing',
 
-    'no_character_selected' => 'No character selected !',
+    'requirement_source_calculated' => 'Calculated',
+    'requirement_source_manual' => 'Manual',
+    'requirement_source_custom' => 'Custom',
+    'custom_skill_type_id_label' => 'Skill Type ID',
+    'add_custom_skill_btn' => 'Add Advanced Skill',
+    'save_requirements_btn' => 'Save Requirements',
+    'no_advanced_requirements' => 'No advanced requirements configured.',
+
+    'no_character_selected' => 'No character selected!',
 ];

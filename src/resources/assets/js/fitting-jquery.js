@@ -2,8 +2,58 @@ let skills_informations;
 
 $('#fitting-box').hide();
 $('#skills-box').hide();
+$('#requirements-box').hide();
+$('#personalDoctrineCheckBox').hide();
 $('#eftexport').hide();
 $('#showeft').val('');
+
+function showSkillResult(result) {
+    if (!result) {
+        return;
+    }
+
+    skills_informations = result;
+
+    $('#skills-box').show();
+    $('#skillbody, #advancedskillbody').empty();
+    $('#groupSkillResults').empty();
+    $('#characterSpinner').empty();
+
+    for (var toons in result.characters) {
+        $('#characterSpinner').append('<option value="' + result.characters[toons].id + '">' + result.characters[toons].name + '</option>');
+    }
+
+    fillSkills(result);
+}
+
+$('#personalCheckMode').on('change', function () {
+    const groupMode = $(this).val() === 'group';
+
+    $('#personalDoctrineCheckBox').toggle(groupMode);
+    $('#fittingSearchFilters').toggle(!groupMode);
+    $('#fitlist_wrapper').toggle(!groupMode);
+    $('#fitting-box, #skills-box, #requirements-box').hide();
+});
+
+$('#runPersonalDoctrineCheck').on('click', function () {
+    const doctrineId = $('#personalDoctrineCheck').val();
+
+    if (!doctrineId) {
+        return;
+    }
+
+    $('#fitting-box').hide();
+    $('#fittingId').text('');
+
+    $.ajax({
+        url: "/fitting/getskillsbydoctrineid/" + doctrineId,
+        type: "GET",
+        dataType: 'json',
+        timeout: 10000
+    }).done(function (result) {
+        showSkillResult(result);
+    });
+});
 
 $('#addFitting').on('click', function () {
     $('#fitEditModal').modal('show');
@@ -30,15 +80,18 @@ $('#fitlist').on('click', '#editfit', function () {
 });
 
 $('#fitlist').on('click', '#viewfit', function () {
+    const fittingId = $(this).data('id');
+
     $('#highSlots, #midSlots, #lowSlots, #rigs, #cargo, #drones, #subSlots')
         .find('tbody')
         .empty();
-    $('#fittingId').text($(this).data('id'));
+    $('#fittingId').text(fittingId);
+    $('#requirementsFittingId').val(fittingId);
 
     $.ajax({
         headers: function () {
         },
-        url: "/fitting/getfittingbyid/" + $(this).data('id'),
+        url: "/fitting/getfittingbyid/" + fittingId,
         type: "GET",
         dataType: 'json',
         timeout: 10000
@@ -54,32 +107,84 @@ $('#fitlist').on('click', '#viewfit', function () {
     $.ajax({
         headers: function () {
         },
-        url: "/fitting/getskillsbyfitid/" + $(this).data('id'),
+        url: "/fitting/getskillsbyfitid/" + fittingId,
         type: "GET",
         dataType: 'json',
         timeout: 10000
     }).done(function (result) {
-        if (result) {
-            skills_informations = result;
-
-            $('#skills-box').show();
-            $('#skillbody').empty();
-
-            if ($('#characterSpinner option').size() === 0) {
-                for (var toons in result.characters) {
-                    $('#characterSpinner').append('<option value="' + result.characters[toons].id + '">' + result.characters[toons].name + '</option>');
-                }
-            }
-            fillSkills(result);
-        }
+        showSkillResult(result);
     });
+
+    if (window.fittingManageMode) {
+        $.ajax({
+            url: "/fitting/" + fittingId + "/requirements",
+            type: "GET",
+            dataType: 'json',
+            timeout: 10000
+        }).done(function (result) {
+            $('#requirements-box').show();
+            fillRequirementEditor(result);
+        });
+    }
 });
 
 $('#characterSpinner').change(function () {
     if (skills_informations) {
         $('#skills-box').show();
-        $('#skillbody').empty();
+        $('#skillbody, #advancedskillbody').empty();
 
         fillSkills(skills_informations);
     }
+});
+
+$('#addAdvancedRequirement').on('click', function () {
+    const skillTypeId = parseInt($('#customSkillTypeId').val());
+    const level = parseInt($('#customSkillLevel').val());
+
+    if (!skillTypeId || !level) {
+        return;
+    }
+
+    $('#advancedRequirementsBody').append(drawRequirementEditorRow({
+        typeId: skillTypeId,
+        typeName: (window.fittingCustomSkillLabel || 'Skill type ID') + ' ' + skillTypeId,
+        level: level,
+    }, true, 'custom'));
+    $('#customSkillTypeId').val('');
+});
+
+$('#requirements-box').on('click', '.removeRequirement', function () {
+    $(this).closest('tr').remove();
+});
+
+$('#saveRequirements').on('click', function () {
+    const fittingId = $('#requirementsFittingId').val();
+
+    if (!fittingId) {
+        return;
+    }
+
+    $.ajax({
+        url: "/fitting/" + fittingId + "/requirements",
+        type: "POST",
+        dataType: 'json',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            minimum: collectRequirements($('#minimumRequirementsBody'), 'manual'),
+            advanced: collectRequirements($('#advancedRequirementsBody'))
+        },
+        timeout: 10000
+    }).done(function (result) {
+        fillRequirementEditor(result);
+        $.ajax({
+            url: "/fitting/getskillsbyfitid/" + fittingId,
+            type: "GET",
+            dataType: 'json',
+            timeout: 10000
+        }).done(function (skills) {
+            skills_informations = skills;
+            $('#skillbody, #advancedskillbody').empty();
+            fillSkills(skills);
+        });
+    });
 });

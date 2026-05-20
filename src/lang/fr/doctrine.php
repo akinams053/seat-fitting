@@ -1,44 +1,49 @@
 <?php
 
 return [
-    'page_title' => 'Doctrines',
+    'page_title' => 'Groupes de fittings',
 
-    'add_doctrine_btn' => 'Créer une nouvelle Doctrine',
-    'select_doctrine_option' => 'Choisir une Doctrine...',
+    'add_doctrine_btn' => 'Créer un nouveau groupe de fittings',
+    'select_doctrine_option' => 'Choisir un groupe de fittings...',
 
-    'edit_doctrine_btn' => 'Editer une Doctrine',
-    'delete_doctrine_btn' => 'Supprimer une Doctrine',
+    'edit_doctrine_btn' => 'Modifier le groupe de fittings',
+    'delete_doctrine_btn' => 'Supprimer le groupe de fittings',
 
-    'add_new_doctrine_title' => 'Ajouter une nouvelle Doctrine',
-    'doctrine_name_label' => 'Nom de Doctrine',
-    'doctrine_fits_label' => 'Choisissez des Fits à ajouter à une Doctrine',
-    'doctrine_fits_add_btn' => 'Ajouter un/des Fit(s)',
-    'doctrine_fits_remove_btn' => 'Retirer un/des Fit(s)',
+    'add_new_doctrine_title' => 'Ajouter un nouveau groupe de fittings',
+    'doctrine_name_label' => 'Nom du groupe',
+    'doctrine_fits_label' => 'Sélectionnez les fittings à ajouter au groupe',
+    'doctrine_fits_add_btn' => 'Ajouter le(s) fit(s)',
+    'doctrine_fits_remove_btn' => 'Retirer le(s) fit(s)',
     'doctrine_chosen_fits_label' => 'Fits choisis',
 
-    'delete_doctrine_modal_title' => 'Etes vous sûr ?',
-    'delete_doctrine_modal_body' => 'Etes vous sur de vouloir supprimer cette Doctrine ?',
+    'delete_doctrine_modal_title' => 'Êtes-vous sûr ?',
+    'delete_doctrine_modal_body' => 'Voulez-vous vraiment supprimer ce groupe de fittings ?',
 
-    'report_page_title' => 'Rapport de Doctrine',
+    'report_page_title' => 'Contrôle de compétences corporation',
 
     'report_alliance_label' => 'Alliance',
-    'report_alliance_note' => '<b>Note:</b> Les résultats du rapport sont (peut piloter le vaisseau / peut piloter le vaisseau équipé)',
+    'report_alliance_note' => '<b>Note :</b> Les résultats indiquent le statut coque, minimum et avancé pour chaque fitting.',
+    'report_alliance_placeholder' => 'Sélectionner les alliances',
 
     'report_corporation_label' => 'Corporation',
+    'report_corporation_placeholder' => 'Sélectionner les corporations',
 
-    'report_doctrine_label' => 'Doctrine',
+    'report_doctrine_label' => 'Groupe de fittings',
 
-    'report_run_btn' => 'Rapport d\'éxecution',
+    'report_run_btn' => 'Lancer le contrôle',
 
-    'report_box_alert_multiple_fitting_names' => 'Il semble que vous ayez des noms de fittings en double. Cela empêchera le rapport
-                de fonctionner correctement. Veuillez modifier les noms de vos fittings.',
+    'report_box_alert_multiple_fitting_names' => 'Des noms de fittings en double ont été détectés.',
 
     'report_loading' => 'Chargement...',
-    'report_run_btn_last_failed' => 'Rapport d\'exécution (Échec du dernier rapport)',
-    'report_run_btn_last_timeout' => 'Rapport d\'exécution (Dernier rapport expiré)',
+    'report_run_btn_last_failed' => 'Lancer le contrôle (dernier échec)',
+    'report_run_btn_last_timeout' => 'Lancer le contrôle (dernier délai dépassé)',
 
     'report_character_header' => 'Personnage',
-    'report_hull_header' => 'COQUE / FIT Totals',
+    'report_totals_header' => 'Totaux',
+    'report_hull_header' => 'Totaux coque',
+    'report_hull_badge' => 'COQUE',
     'report_fit_badge' => 'FIT',
-
+    'report_minimum_badge' => 'MIN',
+    'report_advanced_badge' => 'ADV',
+    'report_not_configured_badge' => 'N/A',
 ];
