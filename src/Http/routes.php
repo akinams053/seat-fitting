@@ -35,21 +35,6 @@ Route::group([
             'uses' => 'FittingController@getFittingView',
             'middleware' => 'can:fitting.view',
         ]);
-        Route::get('/about', [
-            'as' => 'cryptafitting::about',
-            'uses' => 'FittingController@getAboutView',
-            'middleware' => 'can:fitting.view',
-        ]);
-        Route::get('/settings', [
-            'as' => 'fitting.settings',
-            'uses' => 'FittingController@getSettings',
-            'middleware' => 'can:fitting.settings',
-        ]);
-        Route::post('/settings', [
-            'as' => 'fitting.saveSettings',
-            'uses' => 'FittingController@saveSettings',
-            'middleware' => 'can:fitting.settings',
-        ]);
         Route::post('/postfitting', [
             'as' => 'cryptafitting::postFitting',
             'uses' => 'FittingController@postFitting',
@@ -67,11 +52,6 @@ Route::group([
         ]);
         Route::get('/getfittingbyid/{id}', [
             'uses' => 'FittingController@getFittingById',
-            'middleware' => 'can:fitting.doctrineview',
-        ]);
-        Route::get('/getfittingcostbyid/{id}', [
-            'as' => 'cryptafitting::appraiseFitting',
-            'uses' => 'FittingController@getFittingCostById',
             'middleware' => 'can:fitting.doctrineview',
         ]);
         Route::get('/getdoctrinebyid/{id}', [

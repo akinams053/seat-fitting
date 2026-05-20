@@ -61,10 +61,9 @@
                 <tbody></tbody>
             </table>
         </div>
-        @include('fitting::includes.maintainer')
     </div>
 
-    @include('fitting::includes.eft-export', ['includeFooter' => false])
+    @include('fitting::includes.eft-export')
 
     @include('fitting::includes.edit-fit-modal')
     @include('fitting::includes.delete-fit-modal')

@@ -13,7 +13,6 @@ use CryptaTech\Seat\Fitting\Validation\DoctrineValidation;
 use CryptaTech\Seat\Fitting\Validation\FittingValidation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use RecursiveTree\Seat\PricesCore\Facades\PriceProviderSystem;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Character\CharacterAffiliation;
 use Seat\Eveapi\Models\Character\CharacterInfo;
@@ -27,25 +26,6 @@ class FittingController extends Controller implements CalculateConstants
     use CalculateEft;
 
     private $requiredSkills = [];
-
-    public function getSettings()
-    {
-        $provider = setting('cryptatech_seat_fitting_price_provider', true);
-
-        return view('fitting::settings', compact(['provider']));
-    }
-
-    public function saveSettings(Request $request)
-    {
-
-        $request->validate([
-            'price_source' => 'required|integer',
-        ]);
-
-        setting(['cryptatech_seat_fitting_price_provider', $request->price_source], true);
-
-        return redirect()->back()->with('success', 'Updated settings');
-    }
 
     public function getDoctrineEdit($doctrine_id)
     {
@@ -212,47 +192,6 @@ class FittingController extends Controller implements CalculateConstants
         return $fitting->toEve();
     }
 
-    public function getFittingCostById($id)
-    {
-        $fit = Fitting::find($id);
-        $provider = setting('cryptatech_seat_fitting_price_provider', true);
-
-        // Check if price provider is configured
-        if ($provider === null) {
-            return response()->json([
-                'error' => 'Price provider not configured. Please configure it in Fitting Settings.',
-                'total' => 0,
-                'ship' => 0,
-                'volume' => 0,
-            ], 400);
-        }
-
-        $items = $fit->fitItems;
-        $ship = new FittingItem;
-        $ship->type_id = $fit->ship_type_id;
-        $ship->quantity = 1;
-        $items->push($ship);
-
-        // $eft = implode("\n", $fit->eftfitting);
-        try {
-            PriceProviderSystem::getPrices($provider, $items);
-        } catch (PriceProviderException $e) {
-            $message = $e->getMessage();
-
-            return redirect()->back()->with('error', "Failed to get prices from price provider: $message");
-        }
-
-        $total = $items->sum(function (FittingItem $v) {
-            return $v->getPrice();
-        });
-
-        $volume = $items->sum(function (FittingItem $item) {
-            return $item->type->volume;
-        });
-
-        return response()->json(['total' => $total, 'ship' => $ship->getPrice(), 'volume' => $volume]);
-    }
-
     public function getFittingById($id)
     {
         $fitting = Fitting::find($id);
@@ -293,11 +232,6 @@ class FittingController extends Controller implements CalculateConstants
         $doctrine_list = $this->getDoctrineList();
 
         return view('fitting::doctrine', compact('doctrine_list', 'doctrine_id'));
-    }
-
-    public function getAboutView()
-    {
-        return view('fitting::about');
     }
 
     public function saveFitting(FittingValidation $request)

@@ -32,22 +32,6 @@ return [
                 'route' => 'cryptafitting::doctrinereport',
                 'permission' => 'fitting.reportview',
             ],
-            'about' => [
-                'label' => 'fitting::config.menu_about',
-                'name' => 'About',
-                'icon' => 'fas fa-info',
-                'route_segment' => 'fitting',
-                'route' => 'cryptafitting::about',
-                'permission' => 'fitting.view',
-            ],
-            'settings' => [
-                'label' => 'fitting::config.menu_settings',
-                'name' => 'Settings',
-                'icon' => 'fas fa-cog',
-                'route_segment' => 'fitting',
-                'route' => 'fitting.settings',
-                'permission' => 'fitting.settings',
-            ],
         ],
     ],
 ];

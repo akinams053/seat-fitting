@@ -181,26 +181,6 @@ class Fitting extends Model
     }
 
     /**
-     * @return float
-     */
-    public function getEstimatedPriceAttribute()
-    {
-        return $this->ship->price->adjusted_price + $this->fitItems->sum(function ($item) {
-            return $item->type->price->adjusted_price * $item->quantity;
-        });
-    }
-
-    /**
-     * @return float
-     */
-    public function getFittingEstimatedPriceAttribute()
-    {
-        return $this->fitItems->sum(function ($item) {
-            return $item->type->price->adjusted_price * $item->quantity;
-        });
-    }
-
-    /**
      * @return string
      */
     public function toEve()

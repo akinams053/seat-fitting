@@ -5,8 +5,6 @@ return [
     'menu_fitting' => 'Fittings',
     'menu_doctrines' => 'Doctrines',
     'menu_doctrine_report' => 'Doctrine Report',
-    'menu_about' => 'About',
-    'menu_settings' => 'Settings',
 
     'permission_view_fitting_label' => 'View Fittings',
     'permission_view_fitting_desc' => 'Ability to see the fittings page',
@@ -19,7 +17,4 @@ return [
 
     'permission_view_reports_label' => 'View Reports',
     'permission_view_reports_desc' => 'View Doctrine Reports',
-
-    'permission_settings_label' => 'Settings',
-    'permission_settings_desc' => 'Ability to configure the plugin',
 ];

@@ -27,9 +27,4 @@ return [
         'description' => 'fitting::config.permission_view_reports_desc',
         'division' => 'military',
     ],
-    'settings' => [
-        'label' => 'fitting::config.permission_settings_label',
-        'description' => 'fitting::config.permission_settings_desc',
-        'division' => 'military',
-    ],
 ];

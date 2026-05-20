@@ -54,7 +54,6 @@
                 </div>
             </div>
         </div>
-        @include('fitting::includes.maintainer')
     </div>
 
     <div class="card card-primary card-solid" id="reportbox">

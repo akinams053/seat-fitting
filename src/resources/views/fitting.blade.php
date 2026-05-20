@@ -80,10 +80,9 @@
                 </tbody>
             </table>
         </div>
-        @include('fitting::includes.maintainer')
     </div>
 
-    @include('fitting::includes.eft-export', ['includeFooter' => true])
+    @include('fitting::includes.eft-export')
     @include('fitting::includes.edit-fit-modal')
     @include('fitting::includes.delete-fit-modal')
 
@@ -150,28 +149,6 @@
             .on('click', '#deletefit', function () {
                 $('#fitConfirmModal').modal('show');
                 $('#fitSelection').val($(this).closest('tr').data('id'));
-            })
-            .on('click', '#viewfit', function () {
-                var fitId = $(this).data('id');
-                $.ajax({
-                    headers: function () {},
-                    url: "/fitting/getfittingcostbyid/" + fitId,
-                    type: "GET",
-                    dataType: 'json',
-                    timeout: 10000
-                }).done(function (result) {
-                    if (result && !result.error) {
-                        let total = result.total.toLocaleString();
-                        let volume = result.volume.toLocaleString();
-                        let ship = result.ship.toLocaleString();
-                        $('#current_appraisal').html(`${ship}/${total} (ISK) - ${volume} m3`);
-                    } else if (result && result.error) {
-                        $('#current_appraisal').html(`<span class="text-warning">${result.error}</span>`);
-                    }
-                }).fail(function(xhr, status, error) {
-                    console.error('Price fetch failed:', error);
-                    $('#current_appraisal').html('<span class="text-danger">Failed to fetch pricing</span>');
-                });
             });
 
         $('#deleteConfirm').on('click', function () {

@@ -7,12 +7,4 @@
                       readonly="readonly"></textarea>
         <div id="exportLinks" class="mt-2 list-group"></div>
     </div>
-    @if($includeFooter)
-        <div class="card-footer">
-            {{trans('fitting::fitting.fitting_current_price')}}
-            <a id="current_appraisal" class="float-right">
-                {{trans('fitting::fitting.fitting_price_empty')}}
-            </a>
-        </div>
-    @endif
 </div>

@@ -17,8 +17,6 @@ return [
     'delete_fitting_tooltip' => 'Delete Fitting',
 
     'eft_fitting_title' => 'EFT Fitting',
-    'fitting_current_price' => 'Current Price',
-    'fitting_price_empty' => '? ISK',
 
     'edit_fitting_modal_title' => 'Are you sure?',
     'edit_fitting_body' => 'Cut and Paste EFT fitting in the box below',

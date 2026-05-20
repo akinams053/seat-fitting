@@ -26,7 +26,6 @@ use CryptaTech\Seat\Fitting\Models\Sde\InvFlag;
 use Illuminate\Database\Eloquent\Model;
 use Seat\Eveapi\Models\Sde\InvType;
 use Seat\Services\Contracts\HasTypeIDWithAmount;
-use Seat\Services\Contracts\IPriceable;
 
 /**
  * Class FittingItem.
@@ -34,7 +33,7 @@ use Seat\Services\Contracts\IPriceable;
  * @property InvType $type
  * @property InvFlag $invFlag
  */
-class FittingItem extends Model implements HasTypeIDWithAmount, IPriceable
+class FittingItem extends Model implements HasTypeIDWithAmount
 {
     /**
      * @var bool
@@ -49,8 +48,6 @@ class FittingItem extends Model implements HasTypeIDWithAmount, IPriceable
     protected $fillable = ['type_id', 'flag', 'fitting_id', 'quantity'];
 
     protected $table = 'crypta_tech_seat_fitting_items';
-
-    protected float $price;
 
     public function type()
     {
@@ -70,27 +67,8 @@ class FittingItem extends Model implements HasTypeIDWithAmount, IPriceable
         return $this->type_id;
     }
 
-    /**
-     * @return int The amount of this item to be appraised
-     */
     public function getAmount(): int
     {
         return $this->quantity;
-    }
-
-    /**
-     * @return float The price of this item stack
-     */
-    public function getPrice(): float
-    {
-        return $this->price;
-    }
-
-    /**
-     * @param  float  $price  The new price of this item stack
-     */
-    public function setPrice(float $price): void
-    {
-        $this->price = $price;
     }
 }
