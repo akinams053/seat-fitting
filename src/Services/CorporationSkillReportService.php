@@ -15,20 +15,43 @@ class CorporationSkillReportService
 
     public function run(array $allianceIds, array $corporationIds, int $doctrineId): array
     {
-        $characters = CharacterInfo::with('skills')
-            ->whereHas('affiliation', function ($affiliation) use ($corporationIds, $allianceIds) {
-                if (count($allianceIds) > 0) {
-                    $affiliation->whereIn('alliance_id', $allianceIds);
-                }
+        $doctrine = Doctrine::with('fittings.ship')->where('id', $doctrineId)->firstOrFail();
+        $fittingChecks = [];
+        $allRequirements = [];
 
-                if (count($corporationIds) > 0) {
-                    $affiliation->whereIn('corporation_id', $corporationIds);
-                }
-            })
+        foreach ($doctrine->fittings as $fitting) {
+            $shipSkills = $this->skillMap($this->calculator->calculateForTypeId($fitting->ship_type_id));
+            $minimumSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'minimum'));
+            $advancedSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'advanced'));
+
+            $fittingChecks[$fitting->fitting_id] = [
+                'ship' => $shipSkills,
+                'minimum' => $minimumSkills,
+                'advanced' => $advancedSkills,
+            ];
+
+            $allRequirements = collect($allRequirements)
+                ->merge($this->requirementsFromSkillMap($shipSkills))
+                ->merge($this->requirementsFromSkillMap($minimumSkills))
+                ->merge($this->requirementsFromSkillMap($advancedSkills))
+                ->unique('typeId')
+                ->values()
+                ->all();
+        }
+
+        $characters = CharacterInfo::whereHas('affiliation', function ($affiliation) use ($corporationIds, $allianceIds) {
+            if (count($allianceIds) > 0) {
+                $affiliation->whereIn('alliance_id', $allianceIds);
+            }
+
+            if (count($corporationIds) > 0) {
+                $affiliation->whereIn('corporation_id', $corporationIds);
+            }
+        })
+            ->select('character_id', 'name')
             ->get();
 
-        $characterSnapshots = $this->characters->forCharacters($characters);
-        $doctrine = Doctrine::where('id', $doctrineId)->firstOrFail();
+        $characterSnapshots = $this->characters->forCharactersWithRequiredSkills($characters, $allRequirements);
         $data = [
             'fittings' => [],
             'fittingDetails' => [],
@@ -39,10 +62,10 @@ class CorporationSkillReportService
         ];
 
         foreach ($doctrine->fittings as $fitting) {
-            $shipSkills = $this->skillMap($this->calculator->calculateForTypeId($fitting->ship_type_id));
-            $minimumSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'minimum'));
-            $advancedSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'advanced'));
             $fittingId = $fitting->fitting_id;
+            $shipSkills = $fittingChecks[$fittingId]['ship'];
+            $minimumSkills = $fittingChecks[$fittingId]['minimum'];
+            $advancedSkills = $fittingChecks[$fittingId]['advanced'];
 
             $data['fittings'][] = $fitting->name;
             $data['fittingDetails'][] = [
@@ -103,6 +126,19 @@ class CorporationSkillReportService
             ->mapWithKeys(function ($skill) {
                 return [$skill['typeId'] => $skill['level']];
             })
+            ->all();
+    }
+
+    private function requirementsFromSkillMap(array $skills): array
+    {
+        return collect($skills)
+            ->map(function ($level, $typeId) {
+                return [
+                    'typeId' => $typeId,
+                    'level' => $level,
+                ];
+            })
+            ->values()
             ->all();
     }
 
