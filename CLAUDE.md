@@ -83,6 +83,12 @@ Core tables (`crypta_tech_seat_*`):
 
 Server-rendered Blade in `src/resources/views/` (`fitting`, `doctrine`, `doctrinereport`) plus partials under `includes/`. Interactivity is plain jQuery in `resources/assets/js/fitting.js` and `fitting-jquery.js`, which talk to the `/fitting/*` endpoints. Remember that asset edits require `vendor:publish --force` on the host to take effect.
 
+Current UI constraints to preserve:
+- In personal fitting check, the concrete fitting detail belongs under the left-side personal check / fitting management card, not under the right-side skill check card.
+- Ordinary personal check should not feature EFT text as the main view; EFT remains a management/export concern.
+- Skill names and skill group names should come from EVE SDE official English `typeName` / `groupName`. The current SeAT SDE import has no `trn*` or translation tables and `invTypes` has no localized name fields, so do not machine-translate skills.
+- Corporation skill check includes a nickname column sourced from `character_infos.title`.
+
 ## Conventions
 
 - CI runs `pint` on every push and auto-commits as `Fixes coding style` (see `.github/workflows/lint.yml`). Run pint locally before pushing to avoid the bot creating an extra commit on your branch.

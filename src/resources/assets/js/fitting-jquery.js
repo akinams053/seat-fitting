@@ -15,7 +15,7 @@ function showSkillResult(result) {
     skills_informations = result;
 
     $('#skills-box').show();
-    $('#skillbody, #advancedskillbody').empty();
+    $('#minimumSkillPanel, #advancedSkillPanel').empty();
     $('#groupSkillResults').empty();
     $('#characterSpinner').empty();
 
@@ -131,26 +131,18 @@ $('#fitlist').on('click', '#viewfit', function () {
 $('#characterSpinner').change(function () {
     if (skills_informations) {
         $('#skills-box').show();
-        $('#skillbody, #advancedskillbody').empty();
+        $('#minimumSkillPanel, #advancedSkillPanel').empty();
 
         fillSkills(skills_informations);
     }
 });
 
-$('#addAdvancedRequirement').on('click', function () {
-    const skillTypeId = parseInt($('#customSkillTypeId').val());
-    const level = parseInt($('#customSkillLevel').val());
+$('#requirements-box').on('change', '.skillGroupSelect', function () {
+    resetRequirementSkillSelect($(this).data('tier'));
+});
 
-    if (!skillTypeId || !level) {
-        return;
-    }
-
-    $('#advancedRequirementsBody').append(drawRequirementEditorRow({
-        typeId: skillTypeId,
-        typeName: (window.fittingCustomSkillLabel || 'Skill type ID') + ' ' + skillTypeId,
-        level: level,
-    }, true, 'custom'));
-    $('#customSkillTypeId').val('');
+$('#requirements-box').on('click', '.addRequirement', function () {
+    addRequirementToEditor($(this).data('tier'));
 });
 
 $('#requirements-box').on('click', '.removeRequirement', function () {
@@ -183,7 +175,7 @@ $('#saveRequirements').on('click', function () {
             timeout: 10000
         }).done(function (skills) {
             skills_informations = skills;
-            $('#skillbody, #advancedskillbody').empty();
+            $('#minimumSkillPanel, #advancedSkillPanel').empty();
             fillSkills(skills);
         });
     });

@@ -35,6 +35,7 @@ class CharacterSkillSnapshotService
             return [$character->character_id => [
                 'id' => $character->character_id,
                 'name' => $character->name,
+                'title' => $character->title,
                 'skill' => [],
             ]];
         });
@@ -108,6 +109,7 @@ class CharacterSkillSnapshotService
             $snapshot = [
                 'id' => $character->character_id,
                 'name' => $character->name,
+                'title' => $character->title,
                 'skill' => [],
             ];
 

@@ -48,6 +48,7 @@ return [
     'fit_rigs_title' => '改装件',
     'fit_subsystems_title' => '子系统',
     'fit_drone_bay_title' => '无人机舱',
+    'fit_cargo_title' => '货柜',
     'fit_drone_bay_number' => '数量',
 
     'required_skills_title' => '技能检查',
@@ -70,6 +71,10 @@ return [
     'requirement_source_manual' => '手动调整',
     'requirement_source_custom' => '自定义',
     'custom_skill_type_id_label' => '技能 Type ID',
+    'skill_group_label' => '技能分类',
+    'skill_select_label' => '技能',
+    'skill_select_placeholder' => '搜索技能…',
+    'add_requirement_btn' => '添加',
     'add_custom_skill_btn' => '添加进阶技能',
     'save_requirements_btn' => '保存技能要求',
     'no_advanced_requirements' => '尚未配置进阶要求。',

@@ -1,9 +1,11 @@
-@extends('web::layouts.grids.4-4-4')
+@extends('web::layouts.grids.12')
 
 @section('title', trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title'))
 @section('page_header', trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title'))
 
-@section('left')
+@section('full')
+    <div class="row">
+        <div class="col-md-4">
     <div class="card card-primary card-solid">
         <div class="card-header">
             <h3 class="card-title">{{trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title')}}</h3>
@@ -108,16 +110,15 @@
         </div>
     </div>
 
+    @include('fitting::includes.display-fit')
     @include('fitting::includes.eft-export')
     @include('fitting::includes.edit-fit-modal')
     @include('fitting::includes.delete-fit-modal')
-
-@endsection
-@section('center')
-    @include('fitting::includes.display-fit')
-@endsection
-@section('right')
-    @include('fitting::includes.display-skills')
+        </div>
+        <div class="col-md-8">
+            @include('fitting::includes.display-skills')
+        </div>
+    </div>
 @endsection
 
 @push('javascript')
@@ -131,6 +132,8 @@
         window.fittingMinimumLabel = "{{trans('fitting::fitting.minimum_requirements_title')}}";
         window.fittingAdvancedLabel = "{{trans('fitting::fitting.advanced_requirements_title')}}";
         window.fittingNoAdvancedLabel = "{{trans('fitting::fitting.no_advanced_requirements')}}";
+        window.fittingSkillPlaceholder = "{{trans('fitting::fitting.skill_select_placeholder')}}";
+        initializeRequirementSelectors();
 
         // Initialize DataTable with search functionality
         var fittingTable = $('#fitlist').DataTable({

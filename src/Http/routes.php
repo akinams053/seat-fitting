@@ -55,6 +55,16 @@ Route::group([
             'uses' => 'FittingController@saveFitting',
             'middleware' => 'can:fitting.create',
         ]);
+        Route::get('/skill-groups', [
+            'as' => 'cryptafitting::skillGroups',
+            'uses' => 'FittingController@getSkillGroups',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::get('/skills/search', [
+            'as' => 'cryptafitting::skillSearch',
+            'uses' => 'FittingController@searchSkills',
+            'middleware' => 'can:fitting.create',
+        ]);
         Route::get('/{id}/requirements', [
             'as' => 'cryptafitting::requirements',
             'uses' => 'FittingController@getFittingRequirements',

@@ -39,11 +39,12 @@ return [
     'report_run_btn_last_timeout' => 'Lancer le contrôle (dernier délai dépassé)',
 
     'report_character_header' => 'Personnage',
+    'report_nickname_header' => 'Surnom',
     'report_totals_header' => 'Totaux',
     'report_hull_header' => 'Totaux coque',
     'report_hull_badge' => 'COQUE',
     'report_fit_badge' => 'FIT',
     'report_minimum_badge' => 'MIN',
     'report_advanced_badge' => 'ADV',
-    'report_not_configured_badge' => 'N/A',
+    'report_not_configured_badge' => 'Avancé non configuré',
 ];

@@ -48,6 +48,7 @@ return [
     'fit_rigs_title' => 'Rigs',
     'fit_subsystems_title' => 'Sous-systèmes',
     'fit_drone_bay_title' => 'Baie de drones',
+    'fit_cargo_title' => 'Soute',
     'fit_drone_bay_number' => 'Nombre',
 
     'required_skills_title' => 'Contrôle de compétences',
@@ -70,6 +71,10 @@ return [
     'requirement_source_manual' => 'Manuel',
     'requirement_source_custom' => 'Personnalisé',
     'custom_skill_type_id_label' => 'Skill Type ID',
+    'skill_group_label' => 'Groupe de compétences',
+    'skill_select_label' => 'Compétence',
+    'skill_select_placeholder' => 'Rechercher une compétence...',
+    'add_requirement_btn' => 'Ajouter',
     'add_custom_skill_btn' => 'Ajouter une compétence avancée',
     'save_requirements_btn' => 'Enregistrer les exigences',
     'no_advanced_requirements' => 'Aucune exigence avancée configurée.',

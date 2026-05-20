@@ -48,7 +48,7 @@ class CorporationSkillReportService
                 $affiliation->whereIn('corporation_id', $corporationIds);
             }
         })
-            ->select('character_id', 'name')
+            ->select('character_id', 'name', 'title')
             ->get();
 
         $characterSnapshots = $this->characters->forCharactersWithRequiredSkills($characters, $allRequirements);
@@ -99,6 +99,7 @@ class CorporationSkillReportService
                     'advanced' => $advanced,
                 ];
                 $data['charsById'][$characterId]['name'] = $character['name'];
+                $data['charsById'][$characterId]['title'] = $character['title'];
                 $data['charsById'][$characterId]['fittings'][$fittingId] = [
                     'ship' => $ship,
                     'minimum' => $minimum,

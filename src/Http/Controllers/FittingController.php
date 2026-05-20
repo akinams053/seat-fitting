@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Gate;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Character\CharacterAffiliation;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
+use Seat\Eveapi\Models\Sde\InvGroup;
 use Seat\Eveapi\Models\Sde\InvType;
 use Seat\Web\Http\Controllers\Controller;
 
@@ -260,7 +261,8 @@ class FittingController extends Controller
         $jsfit['eft'] = $fit->toEve();
         $jsfit['shipname'] = $fit->ship->typeName;
         $jsfit['fitname'] = $fit->name;
-        $jsfit['dronebay'] = []; // Lets load fighters in here too xD
+        $jsfit['dronebay'] = [];
+        $jsfit['cargo'] = [];
         foreach ($fit->items as $ls) {
 
             switch ($ls->flag) {
@@ -273,7 +275,12 @@ class FittingController extends Controller
                     }
                     break;
 
-                case Fitting::BAY_CARGO: // Not included in the JS response :)
+                case Fitting::BAY_CARGO:
+                    if (isset($jsfit['cargo'][$ls->type_id])) {
+                        $jsfit['cargo'][$ls->type_id]['qty'] += $ls->quantity;
+                    } else {
+                        $jsfit['cargo'][$ls->type_id] = ['qty' => $ls->quantity, 'name' => $ls->type->typeName];
+                    }
                     break;
 
                 default:
@@ -301,6 +308,65 @@ class FittingController extends Controller
         ]);
     }
 
+    public function getSkillGroups()
+    {
+        $groups = InvGroup::where('categoryID', InvGroup::SKILL_CATEGORY_ID)
+            ->where('published', true)
+            ->whereHas('types', function ($types) {
+                $types->where('published', true);
+            })
+            ->orderBy('groupName')
+            ->get(['groupID', 'groupName'])
+            ->map(function (InvGroup $group) {
+                return [
+                    'id' => $group->groupID,
+                    'text' => $group->groupName,
+                    'name' => $group->groupName,
+                ];
+            })
+            ->values();
+
+        return response()->json($groups);
+    }
+
+    public function searchSkills(Request $request)
+    {
+        $request->validate([
+            'group_id' => 'nullable|integer',
+            'q' => 'nullable|string|max:100',
+        ]);
+
+        $term = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $request->input('q', ''));
+        $skills = InvType::where('published', true)
+            ->whereHas('group', function ($group) {
+                $group->where('categoryID', InvGroup::SKILL_CATEGORY_ID)
+                    ->where('published', true);
+            })
+            ->when($request->filled('group_id'), function ($query) use ($request) {
+                $query->where('groupID', (int) $request->input('group_id'));
+            })
+            ->when($term !== '', function ($query) use ($term) {
+                $query->where('typeName', 'like', "%{$term}%");
+            })
+            ->orderBy('typeName')
+            ->limit(50)
+            ->get(['typeID', 'typeName', 'groupID'])
+            ->map(function (InvType $skill) {
+                return [
+                    'id' => $skill->typeID,
+                    'text' => $skill->typeName,
+                    'typeId' => $skill->typeID,
+                    'typeName' => $skill->typeName,
+                    'groupId' => $skill->groupID,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'results' => $skills,
+        ]);
+    }
+
     public function saveFittingRequirements(Request $request, $id)
     {
         $request->validate([
@@ -320,8 +386,15 @@ class FittingController extends Controller
         $minimum = $request->input('minimum', []);
         $advanced = $request->input('advanced', []);
         $requirements = collect($minimum)->merge($advanced);
-        $skillIds = $requirements->pluck('skill_type_id')->unique()->values()->all();
-        $knownSkillIds = InvType::whereIn('typeID', $skillIds)->pluck('typeID')->all();
+        $skillIds = $requirements->pluck('skill_type_id')->map(function ($skillId) {
+            return (int) $skillId;
+        })->unique()->values()->all();
+        $knownSkillIds = InvType::whereIn('typeID', $skillIds)
+            ->whereHas('group', function ($group) {
+                $group->where('categoryID', InvGroup::SKILL_CATEGORY_ID);
+            })
+            ->pluck('typeID')
+            ->all();
 
         abort_if(count($knownSkillIds) !== count($skillIds), 422, 'Unknown skill type id.');
 

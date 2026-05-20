@@ -136,9 +136,9 @@
                         header += "<th style='text-align: center'>" + escapeReportHtml(fitting.name) + "</th>";
                     }
 
-                    report.find("thead").append("<tr><th>{{trans('fitting::doctrine.report_character_header')}}</th>" + header + "</tr>");
+                    report.find("thead").append("<tr><th>{{trans('fitting::doctrine.report_character_header')}}</th><th>{{trans('fitting::doctrine.report_nickname_header')}}</th>" + header + "</tr>");
 
-                    let totals = "<tr><td><label>{{trans('fitting::doctrine.report_totals_header')}}</label></td>";
+                    let totals = "<tr><td colspan='2'><label>{{trans('fitting::doctrine.report_totals_header')}}</label></td>";
 
                     for (const fitting of fittings) {
                         const fitTotals = result.totalsByFittingId[fitting.id];
@@ -158,6 +158,7 @@
                     for (const characterId in result.charsById) {
                         const character = result.charsById[characterId];
                         let body = "<tr><td style='position: sticky;'>" + escapeReportHtml(character.name) + "</td>";
+                        body += "<td>" + escapeReportHtml(character.title || '') + "</td>";
 
                         for (const fitting of fittings) {
                             const check = character.fittings[fitting.id];

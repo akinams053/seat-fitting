@@ -39,11 +39,12 @@ return [
     'report_run_btn_last_timeout' => '开始检查（上次超时）',
 
     'report_character_header' => '角色',
+    'report_nickname_header' => '昵称',
     'report_totals_header' => '合计',
     'report_hull_header' => '舰体合计',
     'report_hull_badge' => '舰体',
     'report_fit_badge' => '完整',
     'report_minimum_badge' => '最低',
     'report_advanced_badge' => '进阶',
-    'report_not_configured_badge' => '未配置',
+    'report_not_configured_badge' => '进阶未配置',
 ];

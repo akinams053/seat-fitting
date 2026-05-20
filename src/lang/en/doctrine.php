@@ -39,11 +39,12 @@ return [
     'report_run_btn_last_timeout' => 'Run Check (Last Check Timed Out)',
 
     'report_character_header' => 'Character',
+    'report_nickname_header' => 'Nickname',
     'report_totals_header' => 'Totals',
     'report_hull_header' => 'Hull Totals',
     'report_hull_badge' => 'HULL',
     'report_fit_badge' => 'FIT',
     'report_minimum_badge' => 'MIN',
     'report_advanced_badge' => 'ADV',
-    'report_not_configured_badge' => 'N/A',
+    'report_not_configured_badge' => 'Advanced Not Set',
 ];

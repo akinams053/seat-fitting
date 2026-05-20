@@ -5,6 +5,7 @@ namespace CryptaTech\Seat\Fitting\Services;
 use CryptaTech\Seat\Fitting\Models\Doctrine;
 use CryptaTech\Seat\Fitting\Models\Fitting;
 use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
+use Seat\Eveapi\Models\Sde\InvType;
 
 class PersonalSkillCheckService
 {
@@ -69,18 +70,28 @@ class PersonalSkillCheckService
     public function requirementsForTier(Fitting $fitting, string $tier): array
     {
         $requirements = $fitting->skillRequirements()
-            ->with('skill')
+            ->with('skill.group')
             ->where('tier', $tier)
             ->orderBy('skill_type_id')
             ->get();
 
         if ($requirements->isEmpty() && $tier === FittingSkillRequirement::TIER_MINIMUM) {
-            return collect($this->calculator->calculateForFitting($fitting))
-                ->map(function ($skill) use ($tier) {
+            $calculated = collect($this->calculator->calculateForFitting($fitting));
+            $skills = InvType::with('group')
+                ->whereIn('typeID', $calculated->pluck('typeId')->all())
+                ->get()
+                ->keyBy('typeID');
+
+            return $calculated
+                ->map(function ($skill) use ($tier, $skills) {
+                    $type = $skills->get($skill['typeId']);
+
                     return [
                         'id' => null,
                         'typeId' => $skill['typeId'],
                         'typeName' => $skill['typeName'],
+                        'groupId' => $type?->group?->groupID,
+                        'groupName' => $type?->group?->groupName,
                         'level' => $skill['level'],
                         'tier' => $tier,
                         'source' => FittingSkillRequirement::SOURCE_CALCULATED,
@@ -97,6 +108,8 @@ class PersonalSkillCheckService
                     'id' => $requirement->id,
                     'typeId' => $requirement->skill_type_id,
                     'typeName' => $requirement->skill->typeName,
+                    'groupId' => $requirement->skill->group?->groupID,
+                    'groupName' => $requirement->skill->group?->groupName,
                     'level' => $requirement->level,
                     'tier' => $requirement->tier,
                     'source' => $requirement->source,

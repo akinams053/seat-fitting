@@ -48,6 +48,7 @@ return [
     'fit_rigs_title' => 'Rigs',
     'fit_subsystems_title' => 'Subsystems',
     'fit_drone_bay_title' => 'Drone Bay',
+    'fit_cargo_title' => 'Cargo',
     'fit_drone_bay_number' => 'Number',
 
     'required_skills_title' => 'Skill Check',
@@ -70,6 +71,10 @@ return [
     'requirement_source_manual' => 'Manual',
     'requirement_source_custom' => 'Custom',
     'custom_skill_type_id_label' => 'Skill Type ID',
+    'skill_group_label' => 'Skill Group',
+    'skill_select_label' => 'Skill',
+    'skill_select_placeholder' => 'Search for a skill...',
+    'add_requirement_btn' => 'Add',
     'add_custom_skill_btn' => 'Add Advanced Skill',
     'save_requirements_btn' => 'Save Requirements',
     'no_advanced_requirements' => 'No advanced requirements configured.',
