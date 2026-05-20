@@ -1,15 +1,19 @@
 # seat-fitting
 
+[![Latest Stable Version](https://img.shields.io/packagist/v/akinams053/seat-fitting.svg?style=flat-square)]()
+[![License](https://img.shields.io/badge/license-GPLv2-blue.svg?style=flat-square)](LICENSE)
+
 A module for [SeAT](https://github.com/eveseat/seat) that holds fittings and can compare the required skills for a fit to your character.
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/akinams053/seat-fitting.svg?style=flat-square)]()
-[![License](https://img.shields.io/badge/license-GPLv2-blue.svg?style=flat-square)](https://raw.githubusercontent.com/dysath/seat-srp/master/LICENSE)
+> **⚠️ 二次开发分支 · Downstream fork**
+>
+> 本仓库基于上游 [`cryptatech/seat-fitting`](https://github.com/eveseat-plugins/seat-fitting) fork，并按本项目需求做了定制（移除价格集成与 About 页、加入中文翻译等）。需要官方未改动版本，请使用原仓库。
+>
+> Forked from upstream [`cryptatech/seat-fitting`](https://github.com/eveseat-plugins/seat-fitting) with downstream customizations. For the canonical plugin, please use the original repository instead.
 
-If you have issues with this, you can contact me on Eve as **Crypta Electrica**, or on the [SeAT Discord](https://eveseat.github.io/docs/about/contact/)
+## Quick Installation
 
-## Quick Installation:
-
-In your seat directory (By default:  /var/www/seat), type the following:
+In your SeAT directory (default `/var/www/seat`):
 
 ```
 php artisan down
@@ -21,16 +25,17 @@ php artisan migrate
 php artisan up
 ```
 
-If  using a docker installation see https://eveseat.github.io/docs/admin_guides/docker_admin/#installing-plugins
+If using a docker installation see https://eveseat.github.io/docs/admin_guides/docker_admin/#installing-plugins
 
-Use the package name `akinams053/seat-fitting`
+Use the package name `akinams053/seat-fitting`. After install, a **Fittings** link will appear in the SeAT left sidebar.
 
-And now, when you log into 'Seat', you should see a 'Fittings' link on the left.
+## Credits · 致谢
 
-Good luck, and Happy Hunting!!  o7
+This fork stands entirely on the work of the upstream authors:
 
-## Usage Tracking
+- **Denngarr B'tarn** — original author of the plugin
+- **Crypta Electrica** — long-time upstream maintainer of [`eveseat-plugins/seat-fitting`](https://github.com/eveseat-plugins/seat-fitting)
 
-In order to get an idea of the usage of this plugin, a very simplistic form of anonymous usage tracking has been implemented.
+本 fork 完全建立在上游作者的成果之上，特此致敬。Upstream 仍是该插件的权威来源；与本 fork 自身定制无关的 bug 报告、功能请求请向 [`eveseat-plugins/seat-fitting`](https://github.com/eveseat-plugins/seat-fitting) 提出。
 
-Read more about the system in use [here](https://github.com/Crypta-Eve/snoopy)
+Licensed under GPL-2.0-only (see [LICENSE](LICENSE)).
