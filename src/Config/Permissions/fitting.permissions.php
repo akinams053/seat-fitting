@@ -42,4 +42,9 @@ return [
         'description' => 'fitting::config.permission_fleet_review_desc',
         'division' => 'military',
     ],
+    'lock_doctrine' => [
+        'label' => 'fitting::config.permission_lock_doctrine_label',
+        'description' => 'fitting::config.permission_lock_doctrine_desc',
+        'division' => 'military',
+    ],
 ];

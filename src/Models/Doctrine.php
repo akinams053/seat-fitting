@@ -11,7 +11,11 @@ class Doctrine extends Model
 
     protected $table = 'crypta_tech_seat_fitting_doctrine';
 
-    protected $fillable = ['id', 'name', 'role_id'];
+    protected $fillable = ['id', 'name', 'role_id', 'is_locked'];
+
+    protected $casts = [
+        'is_locked' => 'boolean',
+    ];
 
     public function fittings()
     {

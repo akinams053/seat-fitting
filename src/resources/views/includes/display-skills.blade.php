@@ -48,8 +48,11 @@
 
 @if($manage ?? false)
     <div class="card fit-card-flat" id="requirements-box" style="display:none;">
-        <div class="card-header">
-            <h3 class="card-title">{{trans('fitting::fitting.manage_requirements_title')}}</h3>
+        <div class="card-header d-flex align-items-center">
+            <h3 class="card-title mb-0">{{trans('fitting::fitting.manage_requirements_title')}}</h3>
+            <button type="button" class="btn btn-sm btn-success ml-auto" id="saveRequirements">
+                <i class="fa fa-save"></i> {{trans('fitting::fitting.save_requirements_btn')}}
+            </button>
         </div>
         <div class="card-body">
             <input type="hidden" id="requirementsFittingId" value="">
@@ -100,12 +103,6 @@
                     </table>
                 </div>
             @endforeach
-
-            <div class="text-right mt-2">
-                <button type="button" class="btn btn-success" id="saveRequirements">
-                    <i class="fa fa-save"></i> {{trans('fitting::fitting.save_requirements_btn')}}
-                </button>
-            </div>
         </div>
     </div>
 @endif

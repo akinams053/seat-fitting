@@ -28,4 +28,7 @@ return [
 
     'permission_fleet_review_label' => '使用舰队审查',
     'permission_fleet_review_desc' => '为后续舰队审查功能预留的权限',
+
+    'permission_lock_doctrine_label' => '锁定配装分组',
+    'permission_lock_doctrine_desc' => '能够锁定/解锁配装分组。锁定后该分组下任何配装、技能方案、改名删除等修改都会被拒绝，直到再次解锁。',
 ];

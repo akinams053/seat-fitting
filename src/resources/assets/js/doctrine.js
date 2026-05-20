@@ -38,8 +38,10 @@ function initializeDoctrineWorkspace() {
     });
 
     $(document).on('click', '.doctrine-group-rename', function () {
-        const groupId = $(this).closest('.doctrine-group').data('groupId');
-        const current = $(this).closest('.doctrine-group').find('.doctrine-group-header-title').text();
+        const group = $(this).closest('.doctrine-group');
+        if (group.hasClass('is-locked')) return;
+        const groupId = group.data('groupId');
+        const current = group.find('.doctrine-group-header-title').text();
         const name = window.prompt(dI18n('workspaceRenameBtn'), current);
         if (!name || !name.trim()) return;
         $.ajax({
@@ -52,12 +54,26 @@ function initializeDoctrineWorkspace() {
     });
 
     $(document).on('click', '.doctrine-group-delete', function () {
-        const groupId = $(this).closest('.doctrine-group').data('groupId');
+        const group = $(this).closest('.doctrine-group');
+        if (group.hasClass('is-locked')) return;
+        const groupId = group.data('groupId');
         if (!window.confirm(dI18n('deleteDoctrineConfirm'))) return;
         $.ajax({
             url: '/fitting/doctrine/' + groupId,
             type: 'POST',
             data: {_token: window.doctrineCsrf, _method: 'DELETE'},
+            dataType: 'json',
+            timeout: 10000,
+        }).done(loadDoctrineWorkspace);
+    });
+
+    $(document).on('click', '.doctrine-group-lock', function () {
+        const groupId = $(this).closest('.doctrine-group').data('groupId');
+        if (!groupId) return;
+        $.ajax({
+            url: '/fitting/doctrine/' + groupId + '/lock',
+            type: 'POST',
+            data: {_token: window.doctrineCsrf},
             dataType: 'json',
             timeout: 10000,
         }).done(loadDoctrineWorkspace);
@@ -151,18 +167,27 @@ function renderGroups() {
     }
 
     for (const group of DoctrineState.groups) {
-        const actions = window.doctrineI18n.canCreate
+        const locked = !!group.is_locked;
+
+        /* Lock-aware action buttons. When locked, modify-actions disappear; the lock
+           toggle itself stays visible (gated by canLock) so an authorised user can
+           always unlock. */
+        const modifyActions = !locked && window.doctrineI18n.canCreate
             ? `<button class="btn btn-xs btn-link text-muted doctrine-group-rename" title="${dEscape(dI18n('workspaceRenameBtn'))}"><i class="fa fa-pen"></i></button>
                <button class="btn btn-xs btn-link text-danger doctrine-group-delete" title="${dEscape(dI18n('deleteDoctrineBtn'))}"><i class="fa fa-trash"></i></button>`
             : '';
+        const lockBtn = window.doctrineI18n.canLock
+            ? `<button class="btn btn-xs btn-link doctrine-group-lock ${locked ? 'text-warning' : 'text-muted'}" title="${dEscape(locked ? dI18n('workspaceUnlockBtn') : dI18n('workspaceLockBtn'))}"><i class="fa ${locked ? 'fa-lock' : 'fa-lock-open'}"></i></button>`
+            : (locked ? `<i class="fa fa-lock text-warning ml-2" title="${dEscape(dI18n('workspaceLockedHint'))}"></i>` : '');
+        const actions = modifyActions + lockBtn;
 
-        const items = group.fittings.map(g => fitCardHtml(g, true)).join('');
+        const items = group.fittings.map(g => fitCardHtml(g, true, locked)).join('');
         const emptyHint = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupEmptyHint'))}</div>`;
 
-        const plans = (group.plans || []).map(p => planAttachedCardHtml(p, 'group')).join('');
+        const plans = (group.plans || []).map(p => planAttachedCardHtml(p, 'group', locked)).join('');
         const plansEmpty = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupPlansEmpty'))}</div>`;
 
-        container.append(`<div class="doctrine-group" data-group-id="${group.id}">
+        container.append(`<div class="doctrine-group ${locked ? 'is-locked' : ''}" data-group-id="${group.id}">
             <div class="doctrine-group-header">
                 <span class="doctrine-group-header-title">${dEscape(group.name)}</span>
                 <span class="doctrine-group-count">(${group.fittings.length})</span>
@@ -206,18 +231,20 @@ function renderPlanPool() {
     }
 }
 
-function fitCardHtml(fit, inGroup) {
+function fitCardHtml(fit, inGroup, locked) {
     const iconUrl = `https://images.evetech.net/types/${fit.typeID}/icon?size=32`;
-    const removeBtn = inGroup
+    /* No ✕ remove on locked-group fit cards. Sortable on .fit-card-plans is also
+       skipped at wire time, so the per-fit plan area becomes purely informational. */
+    const removeBtn = (inGroup && !locked)
         ? `<button class="fit-card-remove" type="button" title="${dEscape(dI18n('workspaceRemoveFitBtn'))}"><i class="fa fa-times"></i></button>`
         : '';
 
-    /* Per-fit attached plans only render on fits INSIDE a doctrine group; the pool has no
-       doctrine context to scope a per-fit attach to. */
     const planChipsHtml = inGroup
         ? (() => {
-            const chips = (fit.plans || []).map(p => planAttachedCardHtml(p, 'fit')).join('');
-            const empty = `<span class="fit-plans-empty text-muted small">${dEscape(dI18n('workspaceFitPlansEmpty'))}</span>`;
+            const chips = (fit.plans || []).map(p => planAttachedCardHtml(p, 'fit', locked)).join('');
+            const empty = locked
+                ? ''
+                : `<span class="fit-plans-empty text-muted small">${dEscape(dI18n('workspaceFitPlansEmpty'))}</span>`;
             return `<div class="fit-card-plans" data-fitting-id="${fit.id}">${chips || empty}</div>`;
         })()
         : '';
@@ -254,18 +281,22 @@ function planPoolCardHtml(plan) {
     </div>`;
 }
 
-function planAttachedCardHtml(plan, scope) {
+function planAttachedCardHtml(plan, scope, locked) {
     /* scope: 'group' → group-level (✕ uses group-plan-remove)
-              'fit'   → fit-level   (✕ uses fit-plan-remove) */
+              'fit'   → fit-level   (✕ uses fit-plan-remove)
+       locked: omits the ✕ remove button entirely so the chip becomes read-only. */
     const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
     const accent = planAccentColor(plan.id);
     const removeClass = scope === 'fit' ? 'fit-plan-remove' : 'group-plan-remove';
+    const removeBtn = locked
+        ? ''
+        : `<button type="button" class="plan-card-remove ${removeClass}" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>`;
     return `<div class="plan-card-attached" data-plan-id="${plan.id}" style="${planAccentStyle(plan.id)}">
         <span class="plan-accent-dot" style="background:${accent.dot};"></span>
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
-        <button type="button" class="plan-card-remove ${removeClass}" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>
+        ${removeBtn}
     </div>`;
 }
 
@@ -304,8 +335,8 @@ function wireSortables() {
         }));
     }
 
-    /* Group-fittings drop zones (existing behavior). */
-    $('.doctrine-group-body').each(function () {
+    /* Group-fittings drop zones — skip locked groups. */
+    $('.doctrine-group:not(.is-locked) .doctrine-group-body').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
             /* put: ['fittings'] strictly — Sortable's put:true accepts ANY group, so a plan
@@ -342,8 +373,8 @@ function wireSortables() {
         }));
     });
 
-    /* Group-level plan drop zones. */
-    $('.doctrine-group-plans-body').each(function () {
+    /* Group-level plan drop zones — skip locked groups. */
+    $('.doctrine-group:not(.is-locked) .doctrine-group-plans-body').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
             group: {name: 'doctrine-plans', pull: false, put: ['doctrine-plans']},
@@ -371,9 +402,8 @@ function wireSortables() {
         }));
     });
 
-    /* Per-fit plan drop zones — only on fits inside doctrine groups (the pool's fit cards
-       have no .fit-card-plans). The doctrine context comes from the enclosing .doctrine-group. */
-    $('.doctrine-group .fit-card-plans').each(function () {
+    /* Per-fit plan drop zones — only on fits inside doctrine groups; locked groups skipped. */
+    $('.doctrine-group:not(.is-locked) .fit-card-plans').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
             group: {name: 'doctrine-plans', pull: false, put: ['doctrine-plans']},

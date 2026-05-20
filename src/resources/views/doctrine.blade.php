@@ -78,6 +78,9 @@
             workspaceGroupPlansEmpty: "{{trans('fitting::doctrine.workspace_group_plans_empty')}}",
             workspaceFitPlansEmpty: "{{trans('fitting::doctrine.workspace_fit_plans_empty')}}",
             workspaceRemovePlanBtn: "{{trans('fitting::doctrine.workspace_remove_plan_btn')}}",
+            workspaceLockBtn: "{{trans('fitting::doctrine.workspace_lock_btn')}}",
+            workspaceUnlockBtn: "{{trans('fitting::doctrine.workspace_unlock_btn')}}",
+            workspaceLockedHint: "{{trans('fitting::doctrine.workspace_locked_hint')}}",
             deleteDoctrineConfirm: "{{trans('fitting::doctrine.delete_doctrine_modal_body')}}",
             tierEntry: "{{trans('fitting::fitting.tab_entry_label')}}",
             tierAdvanced: "{{trans('fitting::fitting.tab_advanced_label')}}",
@@ -85,7 +88,8 @@
             planDeleteTooltip: "{{trans('fitting::fitting.plan_delete_tooltip')}}",
             planDeleteConfirm: "{{trans('fitting::fitting.plan_delete_confirm')}}",
             planNoMatches: "{{trans('fitting::fitting.plan_no_matches_in_text')}}",
-            canCreate: {{ auth()->user()->can('fitting.create') ? 'true' : 'false' }}
+            canCreate: {{ auth()->user()->can('fitting.create') ? 'true' : 'false' }},
+            canLock: {{ auth()->user()->can('fitting.lock_doctrine') ? 'true' : 'false' }}
         };
         window.doctrineCsrf = "{{ csrf_token() }}";
         initializeDoctrineWorkspace();

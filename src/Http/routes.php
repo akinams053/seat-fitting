@@ -140,6 +140,11 @@ Route::group([
             'uses' => 'FittingController@renameDoctrine',
             'middleware' => 'can:fitting.create',
         ]);
+        Route::post('/doctrine/{id}/lock', [
+            'as' => 'cryptafitting::toggleDoctrineLock',
+            'uses' => 'FittingController@toggleDoctrineLock',
+            'middleware' => 'can:fitting.lock_doctrine',
+        ]);
         Route::delete('/doctrine/{id}', [
             'as' => 'cryptafitting::deleteDoctrine',
             'uses' => 'FittingController@deleteDoctrine',

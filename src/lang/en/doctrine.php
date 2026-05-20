@@ -33,9 +33,13 @@ return [
     'workspace_plan_pool_title' => 'Auxiliary Skill Plans',
     'workspace_plan_pool_hint' => 'Drag a plan onto a group below. The plan will raise requirements for every fitting in that group, tier-by-tier.',
     'workspace_plan_pool_empty' => 'No plans available. Create one in "Fitting & Skill Management".',
-    'workspace_group_plans_empty' => 'Drop a skill plan here',
+    'workspace_group_plans_empty' => 'Drop a skill plan here to apply it to this group',
     'workspace_fit_plans_empty' => 'Drop a plan to attach to this fitting',
     'workspace_remove_plan_btn' => 'Remove plan from group',
+    'workspace_lock_btn' => 'Lock this group',
+    'workspace_unlock_btn' => 'Unlock this group',
+    'workspace_locked_hint' => 'This group is locked',
+    'locked_error' => 'This group is locked and cannot be modified. Unlock it first.',
 
     'report_page_title' => 'Corporation Skill Check',
 

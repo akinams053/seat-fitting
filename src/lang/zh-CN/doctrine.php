@@ -33,9 +33,13 @@ return [
     'workspace_plan_pool_title' => '辅助技能方案',
     'workspace_plan_pool_hint' => '把方案拖入下方分组，会逐档抬高该分组内每个配装的要求。',
     'workspace_plan_pool_empty' => '暂无方案。请在「配装及技能管理」页新建。',
-    'workspace_group_plans_empty' => '拖入方案到此',
+    'workspace_group_plans_empty' => '拖入方案到此，应用辅助技能到此分组',
     'workspace_fit_plans_empty' => '拖入方案附到此配装',
     'workspace_remove_plan_btn' => '从分组移除方案',
+    'workspace_lock_btn' => '锁定此分组',
+    'workspace_unlock_btn' => '解锁此分组',
+    'workspace_locked_hint' => '此分组已锁定',
+    'locked_error' => '该分组已锁定，无法修改。请先解锁。',
 
     'report_page_title' => '军团技能检查',
 

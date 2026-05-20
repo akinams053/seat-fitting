@@ -28,4 +28,7 @@ return [
 
     'permission_fleet_review_label' => 'Use Fleet Review',
     'permission_fleet_review_desc' => 'Reserved permission for future fleet review features',
+
+    'permission_lock_doctrine_label' => 'Lock Fitting Groups',
+    'permission_lock_doctrine_desc' => 'Ability to lock/unlock a fitting group. Once locked, every modification on that group (fittings, plans, rename, delete) is rejected until it is unlocked again.',
 ];

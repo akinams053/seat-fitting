@@ -33,9 +33,13 @@ return [
     'workspace_plan_pool_title' => 'Plans de compétences auxiliaires',
     'workspace_plan_pool_hint' => 'Déposez un plan sur un groupe ci-dessous pour augmenter les exigences de chaque fit du groupe.',
     'workspace_plan_pool_empty' => 'Aucun plan disponible. Créez-en un dans « Gestion des fits et compétences ».',
-    'workspace_group_plans_empty' => 'Déposer un plan ici',
+    'workspace_group_plans_empty' => 'Déposer un plan ici pour l\'appliquer à ce groupe',
     'workspace_fit_plans_empty' => 'Déposer un plan sur ce fit',
     'workspace_remove_plan_btn' => 'Retirer le plan du groupe',
+    'workspace_lock_btn' => 'Verrouiller ce groupe',
+    'workspace_unlock_btn' => 'Déverrouiller ce groupe',
+    'workspace_locked_hint' => 'Ce groupe est verrouillé',
+    'locked_error' => 'Ce groupe est verrouillé et ne peut pas être modifié. Déverrouillez-le d\'abord.',
 
     'report_page_title' => 'Contrôle de compétences corporation',
 

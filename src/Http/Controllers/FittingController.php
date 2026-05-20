@@ -114,6 +114,10 @@ class FittingController extends Controller
 
     public function delDoctrineById($id)
     {
+        $doctrine = Doctrine::find($id);
+        if ($doctrine) {
+            $this->abortIfDoctrineLocked($doctrine);
+        }
         DB::transaction(function () use ($id) {
             /* Polymorphic attachments have no DB-level FK back to doctrine — clean manually
                to avoid orphan rows that would still be returned by skillPlans()/attachments queries. */
@@ -586,6 +590,7 @@ class FittingController extends Controller
             return [
                 'id' => $d->id,
                 'name' => $d->name,
+                'is_locked' => (bool) $d->is_locked,
                 'fittings' => $items,
                 'plans' => $plans,
             ];
@@ -621,6 +626,7 @@ class FittingController extends Controller
         ]);
 
         $doctrine = Doctrine::findOrFail($id);
+        $this->abortIfDoctrineLocked($doctrine);
         $doctrine->name = $data['name'];
         $doctrine->save();
 
@@ -635,6 +641,7 @@ class FittingController extends Controller
     public function deleteDoctrine($id)
     {
         $doctrine = Doctrine::findOrFail($id);
+        $this->abortIfDoctrineLocked($doctrine);
         DB::transaction(function () use ($doctrine) {
             FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
                 ->where('attachable_id', $doctrine->id)
@@ -650,9 +657,33 @@ class FittingController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Toggle the is_locked flag on a doctrine. Locking freezes the doctrine — every mutating
+     * endpoint (rename, delete, fitting add/remove, plan attach/detach at group or per-fit
+     * scope) refuses with 423 until the doctrine is unlocked again. Reads (personal & corp
+     * checks) are untouched. Permission: fitting.lock_doctrine, gated at the route.
+     */
+    public function toggleDoctrineLock($id)
+    {
+        $doctrine = Doctrine::findOrFail($id);
+        $doctrine->is_locked = ! $doctrine->is_locked;
+        $doctrine->save();
+
+        return response()->json([
+            'id' => $doctrine->id,
+            'is_locked' => (bool) $doctrine->is_locked,
+        ]);
+    }
+
+    private function abortIfDoctrineLocked(Doctrine $doctrine): void
+    {
+        abort_if($doctrine->is_locked, 423, trans('fitting::doctrine.locked_error'));
+    }
+
     public function attachFittingToDoctrine($id, $fittingId)
     {
         $doctrine = Doctrine::findOrFail($id);
+        $this->abortIfDoctrineLocked($doctrine);
         $fitting = Fitting::findOrFail($fittingId);
         $doctrine->fittings()->syncWithoutDetaching([$fitting->fitting_id]);
 
@@ -664,6 +695,7 @@ class FittingController extends Controller
     public function detachFittingFromDoctrine($id, $fittingId)
     {
         $doctrine = Doctrine::findOrFail($id);
+        $this->abortIfDoctrineLocked($doctrine);
         DB::transaction(function () use ($doctrine, $fittingId) {
             /* Drop scoped per-fit attachments for this (fitting, doctrine) pair so
                the now-removed fit doesn't keep ghost requirements via that doctrine. */
@@ -924,7 +956,8 @@ class FittingController extends Controller
     {
         FittingSkillPlan::findOrFail($id);
         Fitting::findOrFail($fittingId);
-        Doctrine::findOrFail($doctrineId);
+        $doctrine = Doctrine::findOrFail($doctrineId);
+        $this->abortIfDoctrineLocked($doctrine);
 
         FittingSkillPlanAttachment::firstOrCreate([
             'plan_id' => (int) $id,
@@ -938,6 +971,10 @@ class FittingController extends Controller
 
     public function detachPlanFromFittingInDoctrine($id, $fittingId, $doctrineId)
     {
+        $doctrine = Doctrine::find($doctrineId);
+        if ($doctrine) {
+            $this->abortIfDoctrineLocked($doctrine);
+        }
         FittingSkillPlanAttachment::where('plan_id', (int) $id)
             ->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
             ->where('attachable_id', (int) $fittingId)
@@ -950,7 +987,8 @@ class FittingController extends Controller
     public function attachPlanToDoctrine($id, $doctrineId)
     {
         FittingSkillPlan::findOrFail($id);
-        Doctrine::findOrFail($doctrineId);
+        $doctrine = Doctrine::findOrFail($doctrineId);
+        $this->abortIfDoctrineLocked($doctrine);
 
         FittingSkillPlanAttachment::firstOrCreate([
             'plan_id' => (int) $id,
@@ -963,6 +1001,10 @@ class FittingController extends Controller
 
     public function detachPlanFromDoctrine($id, $doctrineId)
     {
+        $doctrine = Doctrine::find($doctrineId);
+        if ($doctrine) {
+            $this->abortIfDoctrineLocked($doctrine);
+        }
         FittingSkillPlanAttachment::where('plan_id', (int) $id)
             ->where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
             ->where('attachable_id', (int) $doctrineId)

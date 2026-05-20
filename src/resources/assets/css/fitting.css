@@ -12,8 +12,8 @@
     --fit-red-soft:     #f4dada;
     --fit-red-text:     #9a3a3a;
     --fit-amber:        #e2a447;
-    --fit-amber-soft:   #f6e7c8;
-    --fit-amber-text:   #8a5a14;
+    --fit-amber-soft:   #ffe082;
+    --fit-amber-text:   #6b4609;
     --fit-blue:         #5c8fcf;
     --fit-blue-soft:    #dde9f7;
     --fit-blue-text:    #2c5a98;
@@ -864,3 +864,12 @@ tr.report-alt-detail > td {
     .fit-card.has-plans { flex-direction: column; }
     .fit-card-plans { border-left: none; border-top: 1px dashed #e2e6ea; padding-left: 40px; }
 }
+
+/* Locked doctrine group — subdued border + faint tint to signal "no edits here". */
+.doctrine-group.is-locked { border-color: #d4a657; background: #fffbef; }
+.doctrine-group.is-locked .doctrine-group-header { background: #fff5d8; }
+.doctrine-group.is-locked .doctrine-group-header-title { color: #6b4609; }
+.doctrine-group.is-locked .fit-card,
+.doctrine-group.is-locked .plan-card-attached { opacity: 0.85; }
+.doctrine-group-lock { padding: 0 6px; }
+.doctrine-group-lock:hover { color: #d4a657 !important; }
