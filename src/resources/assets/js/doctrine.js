@@ -308,13 +308,19 @@ function wireSortables() {
     $('.doctrine-group-body').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
-            group: {name: 'fittings', pull: false, put: true},
+            /* put: ['fittings'] strictly — Sortable's put:true accepts ANY group, so a plan
+               dragged over a fit list would be added as if it were a fit. Whitelist the
+               group name to prevent that cross-drop. */
+            group: {name: 'fittings', pull: false, put: ['fittings']},
             animation: 180,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             onAdd: function (evt) {
                 const groupId = $(el).data('groupId');
                 const fittingId = $(evt.item).data('fittingId');
+                /* Defensive: if the dropped item isn't actually a fit card (no fittingId),
+                   yank it back out. Shouldn't reach here given the group whitelist, but
+                   keeps us safe if Sortable's filter ever lets one slip through. */
                 if (!groupId || !fittingId) {
                     evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
                     return;
@@ -340,7 +346,7 @@ function wireSortables() {
     $('.doctrine-group-plans-body').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
-            group: {name: 'doctrine-plans', pull: false, put: true},
+            group: {name: 'doctrine-plans', pull: false, put: ['doctrine-plans']},
             animation: 180,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
@@ -370,7 +376,7 @@ function wireSortables() {
     $('.doctrine-group .fit-card-plans').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
-            group: {name: 'doctrine-plans', pull: false, put: true},
+            group: {name: 'doctrine-plans', pull: false, put: ['doctrine-plans']},
             animation: 180,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',

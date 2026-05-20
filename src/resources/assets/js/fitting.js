@@ -743,7 +743,9 @@ function renderSkillGroup(group, character) {
         rows.push(renderSkillRow(skill, currentLevel, requiredLevel, rank, missing));
     }
     const stateClass = hasMissing ? 'is-missing' : 'is-passing';
-    const expanded = hasMissing ? 'true' : 'false';
+    /* Skill categories collapse by default; user clicks the header to expand.
+       Keeps the panel compact regardless of whether the group has gaps. */
+    const expanded = 'false';
     return `<div class="skill-group ${stateClass}" data-expanded="${expanded}">
         <div class="skill-group-header">
             <span class="skill-group-chevron">▶</span>

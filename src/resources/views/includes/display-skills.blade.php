@@ -101,9 +101,11 @@
                 </div>
             @endforeach
 
-            <button type="button" class="btn btn-success" id="saveRequirements">
-                <i class="fa fa-save"></i> {{trans('fitting::fitting.save_requirements_btn')}}
-            </button>
+            <div class="text-right mt-2">
+                <button type="button" class="btn btn-success" id="saveRequirements">
+                    <i class="fa fa-save"></i> {{trans('fitting::fitting.save_requirements_btn')}}
+                </button>
+            </div>
         </div>
     </div>
 @endif

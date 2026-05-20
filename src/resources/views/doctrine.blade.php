@@ -15,10 +15,10 @@
     <div class="row">
         <div class="col-lg-5 col-md-12 doctrine-groups-col">
             <div class="card fit-card-flat">
-                <div class="card-header d-flex align-items-center justify-content-between">
+                <div class="card-header d-flex align-items-center">
                     <h3 class="card-title mb-0">{{trans('fitting::doctrine.workspace_groups_title')}}</h3>
                     @can('fitting.create')
-                        <button type="button" class="btn btn-sm btn-success" id="createDoctrineBtn">
+                        <button type="button" class="btn btn-sm btn-success ml-3" id="createDoctrineBtn">
                             <i class="fa fa-plus"></i> {{trans('fitting::doctrine.workspace_new_group_btn')}}
                         </button>
                     @endcan
@@ -40,10 +40,10 @@
             </div>
 
             <div class="card fit-card-flat">
-                <div class="card-header d-flex align-items-center justify-content-between">
+                <div class="card-header d-flex align-items-center">
                     <h3 class="card-title mb-0">{{trans('fitting::doctrine.workspace_plan_pool_title')}}</h3>
                     @can('fitting.create')
-                        <button type="button" class="btn btn-sm btn-success" id="addPlanBtn">
+                        <button type="button" class="btn btn-sm btn-success ml-3" id="addPlanBtn">
                             <i class="fa fa-plus"></i> {{trans('fitting::fitting.plan_new_btn')}}
                         </button>
                     @endcan
