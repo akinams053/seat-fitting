@@ -17,8 +17,11 @@ class PersonalSkillCheckService
 
     public function checkForCurrentUser(Fitting $fitting): array
     {
-        $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM);
-        $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED);
+        /* Single-fitting personal check has no doctrine context: only directly attached
+           plans apply. Doctrine-inherited plans are scoped to checks that go through a
+           specific group (checkDoctrineForCurrentUser / corp report). */
+        $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM, null);
+        $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED, null);
         $allRequirements = collect($minimum)->merge($advanced)->unique('typeId')->values()->all();
         $characters = $this->characters->addMissingSkills($this->characters->forCurrentUser(), $allRequirements);
 
@@ -29,7 +32,7 @@ class PersonalSkillCheckService
                 FittingSkillRequirement::TIER_ADVANCED => $advanced,
             ],
             'characters' => $characters->all(),
-            'plans' => $this->attachedPlansSummary($fitting),
+            'plans' => $this->attachedPlansSummary($fitting, null),
         ];
     }
 
@@ -40,8 +43,8 @@ class PersonalSkillCheckService
         $fittingResults = [];
 
         foreach ($fittings as $fitting) {
-            $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM);
-            $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED);
+            $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM, $doctrine->id);
+            $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED, $doctrine->id);
             $requirements = collect($minimum)->merge($advanced)->unique('typeId')->values()->all();
             $allRequirements = collect($allRequirements)->merge($requirements)->unique('typeId')->values()->all();
 
@@ -54,7 +57,7 @@ class PersonalSkillCheckService
                     FittingSkillRequirement::TIER_MINIMUM => $minimum,
                     FittingSkillRequirement::TIER_ADVANCED => $advanced,
                 ],
-                'plans' => $this->attachedPlansSummary($fitting),
+                'plans' => $this->attachedPlansSummary($fitting, $doctrine->id),
             ];
         }
 
@@ -72,14 +75,26 @@ class PersonalSkillCheckService
     }
 
     /**
-     * Effective requirements = fitting's own rows MAX-merged with items from any plan
-     * attached either directly or via a containing doctrine, restricted to plans of this tier.
+     * Effective requirements = fitting's own rows MAX-merged with applicable plan items.
+     *
+     * Plan scope:
+     *   - Plans attached directly to the fitting: always apply.
+     *   - Plans attached to a doctrine:
+     *       * When $contextDoctrineId is set (group check): ONLY that doctrine's plans
+     *         inherit. Prevents D's plan from leaking into a check of the same fitting
+     *         viewed through D2.
+     *       * When $contextDoctrineId is null (single-fit check): plans from EVERY
+     *         doctrine containing the fitting inherit. Single-fit view has no group
+     *         context, so the safe interpretation is "the fitting belongs to all of
+     *         these groups, all of their requirements apply". Users avoid over-
+     *         constraining by following the copy-fit-per-group convention so each
+     *         fitting normally belongs to only one doctrine.
      */
-    public function effectiveRequirementsForTier(Fitting $fitting, string $tier): array
+    public function effectiveRequirementsForTier(Fitting $fitting, string $tier, ?int $contextDoctrineId = null): array
     {
         $base = $this->requirementsForTier($fitting, $tier);
 
-        return $this->mergePlanItems($fitting, $tier, $base);
+        return $this->mergePlanItems($fitting, $tier, $base, $contextDoctrineId);
     }
 
     public function requirementsForTier(Fitting $fitting, string $tier): array
@@ -136,9 +151,9 @@ class PersonalSkillCheckService
             ->all();
     }
 
-    private function mergePlanItems(Fitting $fitting, string $tier, array $baseRequirements): array
+    private function mergePlanItems(Fitting $fitting, string $tier, array $baseRequirements, ?int $contextDoctrineId): array
     {
-        $contributionsByTypeId = $this->collectPlanContributions($fitting, $tier);
+        $contributionsByTypeId = $this->collectPlanContributions($fitting, $tier, $contextDoctrineId);
         if (empty($contributionsByTypeId)) {
             return $baseRequirements;
         }
@@ -194,20 +209,37 @@ class PersonalSkillCheckService
     }
 
     /**
-     * Build typeId => [{plan_id, level}, ...] from every plan that applies to this fitting:
-     * directly attached, plus inherited via any doctrine containing the fitting. Tier-filtered.
+     * Build typeId => [{plan_id, level}, ...] from every plan applicable in the given context:
+     *   - Always: plans attached directly to the fitting.
+     *   - $contextDoctrineId set: also plans from that specific doctrine.
+     *   - $contextDoctrineId null: also plans from EVERY doctrine that contains this fitting
+     *     (single-fit view has no group context — the natural reading is "fit is a member of
+     *     all of these groups, all of their plans apply").
+     * Tier-filtered.
      */
-    private function collectPlanContributions(Fitting $fitting, string $tier): array
+    private function collectPlanContributions(Fitting $fitting, string $tier, ?int $contextDoctrineId): array
     {
         $plans = $fitting->skillPlans()->where('tier', $tier)->with('items')->get();
 
-        $doctrines = $fitting->doctrines()->with(['skillPlans' => function ($query) use ($tier) {
-            $query->where('tier', $tier)->with('items');
-        }])->get();
+        if ($contextDoctrineId !== null) {
+            $doctrine = Doctrine::with(['skillPlans' => function ($query) use ($tier) {
+                $query->where('tier', $tier)->with('items');
+            }])->find($contextDoctrineId);
 
-        foreach ($doctrines as $doctrine) {
-            foreach ($doctrine->skillPlans as $plan) {
-                $plans->push($plan);
+            if ($doctrine) {
+                foreach ($doctrine->skillPlans as $plan) {
+                    $plans->push($plan);
+                }
+            }
+        } else {
+            $doctrines = $fitting->doctrines()->with(['skillPlans' => function ($query) use ($tier) {
+                $query->where('tier', $tier)->with('items');
+            }])->get();
+
+            foreach ($doctrines as $doctrine) {
+                foreach ($doctrine->skillPlans as $plan) {
+                    $plans->push($plan);
+                }
             }
         }
 
@@ -227,11 +259,15 @@ class PersonalSkillCheckService
     }
 
     /**
-     * Shape attached-plan summaries for the personal check UI to render cards beside a fitting.
-     * Returns plans attached directly to the fitting plus plans inherited from any containing doctrine,
-     * tagged with `via` so the UI can distinguish direct vs inherited.
+     * Plan-attachment summary for the UI.
+     *   - Direct fitting attachments always included.
+     *   - $contextDoctrineId set: also that doctrine's plans (tagged via='doctrine', via_name=name).
+     *   - $contextDoctrineId null: also plans from EVERY doctrine that contains the fitting,
+     *     each tagged with its source doctrine name so the user can tell where a chip came from.
+     * A plan that appears via multiple paths is reported once (prefers the more specific
+     * 'fitting' source, then first-doctrine-seen).
      */
-    private function attachedPlansSummary(Fitting $fitting): array
+    private function attachedPlansSummary(Fitting $fitting, ?int $contextDoctrineId): array
     {
         $summary = [];
 
@@ -239,14 +275,22 @@ class PersonalSkillCheckService
             $summary[] = $this->planSummaryShape($plan, 'fitting', null);
         }
 
-        foreach ($fitting->doctrines()->with(['skillPlans.items.skill'])->get() as $doctrine) {
-            foreach ($doctrine->skillPlans as $plan) {
-                $summary[] = $this->planSummaryShape($plan, 'doctrine', $doctrine->name);
+        if ($contextDoctrineId !== null) {
+            $doctrine = Doctrine::with(['skillPlans.items.skill'])->find($contextDoctrineId);
+            if ($doctrine) {
+                foreach ($doctrine->skillPlans as $plan) {
+                    $summary[] = $this->planSummaryShape($plan, 'doctrine', $doctrine->name);
+                }
+            }
+        } else {
+            $doctrines = $fitting->doctrines()->with(['skillPlans.items.skill'])->get();
+            foreach ($doctrines as $doctrine) {
+                foreach ($doctrine->skillPlans as $plan) {
+                    $summary[] = $this->planSummaryShape($plan, 'doctrine', $doctrine->name);
+                }
             }
         }
 
-        /* A plan attached to both the fitting directly and an inherited doctrine should only
-           appear once; prefer the more specific 'fitting' source. */
         $seen = [];
         $deduped = [];
         foreach ($summary as $entry) {

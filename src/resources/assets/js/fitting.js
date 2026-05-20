@@ -366,20 +366,6 @@ function renderFitDetails(result) {
     $('#fitDetailEmpty').hide();
     $('#fitDetail').show().removeClass('fit-fade-in').addClass('fit-fade-in');
     $('#fitDetailTitle').text(`${result.shipname || ''} · ${result.fitname || ''}`);
-    $('#showeft').val(result.eft || '');
-
-    const exportLinks = $('#exportLinks');
-    exportLinks.empty();
-    for (const link of result.exportLinks || []) {
-        exportLinks.append(`<a href="${link.url}" class="list-group-item list-group-item-action">${escapeHtml(link.name)}</a>`);
-    }
-    if (window.fittingManageMode) {
-        $('#eftexport').show();
-        exportLinks.show();
-    } else {
-        $('#eftexport').hide();
-        exportLinks.hide();
-    }
 
     /* Clear all slots first */
     const slotIds = ['highSlots', 'midSlots', 'lowSlots', 'rigs', 'subSlots', 'drones', 'cargo'];
@@ -425,10 +411,12 @@ function renderFitDetails(result) {
         }
     }
 
+    /* Slots default to collapsed; user can click header to expand. Showing the count
+       keeps the panel informative without taking vertical space. */
     for (const sid of slotIds) {
         const slotEl = $(`.fit-detail-slot[data-slot="${sid}"]`);
         if (counts[sid] > 0) {
-            slotEl.attr('data-expanded', 'true');
+            slotEl.attr('data-expanded', 'false');
             slotEl.find('.fit-detail-slot-count').text(`(${counts[sid]})`);
             slotEl.show();
         } else {

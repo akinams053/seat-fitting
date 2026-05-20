@@ -7,11 +7,6 @@
 <div id="fitDetail" style="display:none;">
     <div class="d-flex align-items-center justify-content-between mb-2">
         <h6 class="mb-0" id="fitDetailTitle"></h6>
-        @if($manage ?? false)
-            <button type="button" class="btn btn-xs btn-outline-secondary" id="eftexportTrigger">
-                <i class="fa fa-code"></i> EFT
-            </button>
-        @endif
     </div>
 
     @foreach([

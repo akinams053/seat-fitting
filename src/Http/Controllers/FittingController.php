@@ -503,12 +503,6 @@ class FittingController extends Controller
     public function getDoctrineWorkspace()
     {
         $fittings = Fitting::with('ship')->orderBy('name')->get();
-        $pool = $fittings->map(fn ($f) => [
-            'id' => $f->fitting_id,
-            'name' => $f->name,
-            'shipType' => $f->ship?->typeName,
-            'typeID' => $f->ship_type_id,
-        ])->values();
 
         $allPlans = FittingSkillPlan::orderBy('name')->get();
         $planPool = $allPlans->map(fn (FittingSkillPlan $p) => [
@@ -517,15 +511,39 @@ class FittingController extends Controller
             'tier' => $p->tier,
         ])->values();
 
-        $planAttachmentsByDoctrineId = FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
-            ->get()
-            ->groupBy('attachable_id');
         $plansById = $allPlans->keyBy('id');
+
+        /* Pre-group ALL plan attachments by target to avoid N+1 when rendering pool / groups. */
+        $allAttachments = FittingSkillPlanAttachment::all();
+        $planAttachmentsByDoctrineId = $allAttachments
+            ->where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
+            ->groupBy('attachable_id');
+        $planAttachmentsByFittingId = $allAttachments
+            ->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+            ->groupBy('attachable_id');
+
+        $fitPlansFor = function (int $fittingId) use ($planAttachmentsByFittingId, $plansById) {
+            $rows = $planAttachmentsByFittingId->get($fittingId) ?? collect();
+
+            return $rows->pluck('plan_id')->map(function ($pid) use ($plansById) {
+                $p = $plansById->get($pid);
+
+                return $p ? ['id' => $p->id, 'name' => $p->name, 'tier' => $p->tier] : null;
+            })->filter()->values()->all();
+        };
+
+        $pool = $fittings->map(fn ($f) => [
+            'id' => $f->fitting_id,
+            'name' => $f->name,
+            'shipType' => $f->ship?->typeName,
+            'typeID' => $f->ship_type_id,
+            'plans' => $fitPlansFor($f->fitting_id),
+        ])->values();
 
         $doctrines = Doctrine::with('fittings:fitting_id')->orderBy('name')->get();
         $byId = $fittings->keyBy('fitting_id');
-        $groups = $doctrines->map(function (Doctrine $d) use ($byId, $planAttachmentsByDoctrineId, $plansById) {
-            $items = $d->fittings->map(function ($pivotFit) use ($byId) {
+        $groups = $doctrines->map(function (Doctrine $d) use ($byId, $planAttachmentsByDoctrineId, $plansById, $fitPlansFor) {
+            $items = $d->fittings->map(function ($pivotFit) use ($byId, $fitPlansFor) {
                 $f = $byId->get($pivotFit->fitting_id);
                 if (! $f) {
                     return null;
@@ -536,6 +554,7 @@ class FittingController extends Controller
                     'name' => $f->name,
                     'shipType' => $f->ship?->typeName,
                     'typeID' => $f->ship_type_id,
+                    'plans' => $fitPlansFor($f->fitting_id),
                 ];
             })->filter()->values();
 

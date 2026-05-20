@@ -21,25 +21,28 @@ class CorporationSkillReportService
     {
         $doctrine = Doctrine::with('fittings.ship')->where('id', $doctrineId)->firstOrFail();
 
-        return $this->runForFittings($allianceIds, $corporationIds, $doctrine->fittings);
+        /* Doctrine-scoped report: pass doctrineId so plans attached to this doctrine apply,
+           but plans attached to OTHER doctrines containing the same fittings do not bleed in. */
+        return $this->runForFittings($allianceIds, $corporationIds, $doctrine->fittings, $doctrine->id);
     }
 
     public function runForFitting(array $allianceIds, array $corporationIds, int $fittingId): array
     {
         $fitting = Fitting::with('ship')->where('fitting_id', $fittingId)->firstOrFail();
 
-        return $this->runForFittings($allianceIds, $corporationIds, collect([$fitting]));
+        /* Single-fitting report has no doctrine context: only directly attached plans apply. */
+        return $this->runForFittings($allianceIds, $corporationIds, collect([$fitting]), null);
     }
 
-    public function runForFittings(array $allianceIds, array $corporationIds, Collection $fittings): array
+    public function runForFittings(array $allianceIds, array $corporationIds, Collection $fittings, ?int $contextDoctrineId = null): array
     {
         $fittingChecks = [];
         $allRequirements = [];
 
         foreach ($fittings as $fitting) {
             $shipSkills = $this->skillMap($this->calculator->calculateForTypeId($fitting->ship_type_id));
-            $minimumSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'minimum'));
-            $advancedSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'advanced'));
+            $minimumSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'minimum', $contextDoctrineId));
+            $advancedSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'advanced', $contextDoctrineId));
 
             $fittingChecks[$fitting->fitting_id] = [
                 'ship' => $shipSkills,

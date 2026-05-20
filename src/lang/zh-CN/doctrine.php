@@ -34,6 +34,7 @@ return [
     'workspace_plan_pool_hint' => '把方案拖入下方分组，会逐档抬高该分组内每个配装的要求。',
     'workspace_plan_pool_empty' => '暂无方案。请在「配装及技能管理」页新建。',
     'workspace_group_plans_empty' => '拖入方案到此',
+    'workspace_fit_plans_empty' => '拖入方案附到此配装',
     'workspace_remove_plan_btn' => '从分组移除方案',
 
     'report_page_title' => '军团技能检查',

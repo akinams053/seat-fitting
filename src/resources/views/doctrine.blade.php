@@ -40,8 +40,13 @@
             </div>
 
             <div class="card fit-card-flat">
-                <div class="card-header d-flex align-items-center">
+                <div class="card-header d-flex align-items-center justify-content-between">
                     <h3 class="card-title mb-0">{{trans('fitting::doctrine.workspace_plan_pool_title')}}</h3>
+                    @can('fitting.create')
+                        <button type="button" class="btn btn-sm btn-success" id="addPlanBtn">
+                            <i class="fa fa-plus"></i> {{trans('fitting::fitting.plan_new_btn')}}
+                        </button>
+                    @endcan
                 </div>
                 <div class="card-body">
                     <small class="text-muted d-block mb-2">{{trans('fitting::doctrine.workspace_plan_pool_hint')}}</small>
@@ -50,10 +55,15 @@
             </div>
         </div>
     </div>
+
+    @can('fitting.create')
+        @include('fitting::includes.plan-edit-modal')
+    @endcan
 @endsection
 
 @push('javascript')
     <script src="{{ asset('web/js/lib/Sortable.min.js') }}"></script>
+    <script src="{{ asset('web/js/plans.js') }}"></script>
     <script src="{{ asset('web/js/doctrine.js') }}"></script>
     <script type="application/javascript">
         window.doctrineI18n = {
@@ -66,10 +76,15 @@
             workspaceRemoveFitBtn: "{{trans('fitting::doctrine.workspace_remove_fit_btn')}}",
             workspacePlanPoolEmpty: "{{trans('fitting::doctrine.workspace_plan_pool_empty')}}",
             workspaceGroupPlansEmpty: "{{trans('fitting::doctrine.workspace_group_plans_empty')}}",
+            workspaceFitPlansEmpty: "{{trans('fitting::doctrine.workspace_fit_plans_empty')}}",
             workspaceRemovePlanBtn: "{{trans('fitting::doctrine.workspace_remove_plan_btn')}}",
             deleteDoctrineConfirm: "{{trans('fitting::doctrine.delete_doctrine_modal_body')}}",
             tierEntry: "{{trans('fitting::fitting.tab_entry_label')}}",
             tierAdvanced: "{{trans('fitting::fitting.tab_advanced_label')}}",
+            planEditTooltip: "{{trans('fitting::fitting.plan_edit_tooltip')}}",
+            planDeleteTooltip: "{{trans('fitting::fitting.plan_delete_tooltip')}}",
+            planDeleteConfirm: "{{trans('fitting::fitting.plan_delete_confirm')}}",
+            planNoMatches: "{{trans('fitting::fitting.plan_no_matches_in_text')}}",
             canCreate: {{ auth()->user()->can('fitting.create') ? 'true' : 'false' }}
         };
         window.doctrineCsrf = "{{ csrf_token() }}";

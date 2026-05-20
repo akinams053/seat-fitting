@@ -19,6 +19,8 @@ function initializeDoctrineWorkspace() {
     if (!$('#doctrineGroupList').length) return;
     loadDoctrineWorkspace();
 
+    /* === Doctrine CRUD === */
+
     $(document).on('click', '#createDoctrineBtn', function () {
         const name = window.prompt(dI18n('workspaceNewGroupPlaceholder'));
         if (!name || !name.trim()) return;
@@ -75,19 +77,50 @@ function initializeDoctrineWorkspace() {
         }).done(loadDoctrineWorkspace);
     });
 
-    $(document).on('click', '.plan-card-remove', function (evt) {
+    /* === Plan attach / detach === */
+
+    $(document).on('click', '.group-plan-remove', function (evt) {
         evt.stopPropagation();
         const groupId = $(this).closest('.doctrine-group').data('groupId');
         const planId = $(this).closest('.plan-card-attached').data('planId');
         if (!groupId || !planId) return;
-        $.ajax({
-            url: '/fitting/plans/' + planId + '/doctrines/' + groupId,
-            type: 'POST',
-            data: {_token: window.doctrineCsrf, _method: 'DELETE'},
-            dataType: 'json',
-            timeout: 10000,
-        }).done(loadDoctrineWorkspace);
+        detachPlanFromDoctrine(planId, groupId).done(loadDoctrineWorkspace);
     });
+
+    $(document).on('click', '.fit-plan-remove', function (evt) {
+        evt.stopPropagation();
+        const fittingId = $(this).closest('.fit-card').data('fittingId');
+        const planId = $(this).closest('.plan-card-attached').data('planId');
+        if (!fittingId || !planId) return;
+        detachPlanFromFitting(planId, fittingId).done(loadDoctrineWorkspace);
+    });
+
+    /* === Plan CRUD === */
+
+    $(document).on('click', '#addPlanBtn', function () {
+        openPlanEditModal(null);
+    });
+
+    $(document).on('click', '.plan-pool-card-edit', function (evt) {
+        evt.stopPropagation();
+        const planId = parseInt($(this).closest('.plan-pool-card').data('planId'));
+        if (!planId) return;
+        $.getJSON('/fitting/plans/' + planId).done(function (plan) {
+            openPlanEditModal(plan);
+        });
+    });
+
+    $(document).on('click', '.plan-pool-card-delete', function (evt) {
+        evt.stopPropagation();
+        const planId = parseInt($(this).closest('.plan-pool-card').data('planId'));
+        const planName = $(this).closest('.plan-pool-card').find('.plan-pool-card-name').text();
+        if (!planId) return;
+        if (!window.confirm((dI18n('planDeleteConfirm') || 'Delete plan?') + '\n\n' + planName)) return;
+        deletePlan(planId);
+    });
+
+    /* plans.js triggers this after create/update/delete */
+    $(document).on('plansChanged', loadDoctrineWorkspace);
 }
 
 function loadDoctrineWorkspace() {
@@ -125,7 +158,7 @@ function renderGroups() {
         const items = group.fittings.map(g => fitCardHtml(g, true)).join('');
         const emptyHint = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupEmptyHint'))}</div>`;
 
-        const plans = (group.plans || []).map(p => planAttachedCardHtml(p)).join('');
+        const plans = (group.plans || []).map(p => planAttachedCardHtml(p, 'group')).join('');
         const plansEmpty = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupPlansEmpty'))}</div>`;
 
         container.append(`<div class="doctrine-group" data-group-id="${group.id}">
@@ -177,33 +210,54 @@ function fitCardHtml(fit, inGroup) {
     const removeBtn = inGroup
         ? `<button class="fit-card-remove" type="button" title="${dEscape(dI18n('workspaceRemoveFitBtn'))}"><i class="fa fa-times"></i></button>`
         : '';
-    return `<div class="fit-card" data-fitting-id="${fit.id}">
-        <img class="fit-card-icon" src="${iconUrl}" alt="">
-        <div class="fit-card-body">
-            <div class="fit-card-name">${dEscape(fit.name)}</div>
-            <div class="fit-card-ship">${dEscape(fit.shipType || '')}</div>
+    /* Per-fit attached plans area — both in pool and inside groups. Sortable target for plan
+       drops; ✕ on each chip detaches. */
+    const fitPlanChips = (fit.plans || []).map(p => planAttachedCardHtml(p, 'fit')).join('');
+    const fitPlanEmpty = inGroup
+        ? `<span class="fit-plans-empty text-muted small">${dEscape(dI18n('workspaceFitPlansEmpty'))}</span>`
+        : '';
+    return `<div class="fit-card has-plans" data-fitting-id="${fit.id}">
+        <div class="fit-card-main">
+            <img class="fit-card-icon" src="${iconUrl}" alt="">
+            <div class="fit-card-body">
+                <div class="fit-card-name">${dEscape(fit.name)}</div>
+                <div class="fit-card-ship">${dEscape(fit.shipType || '')}</div>
+            </div>
+            ${removeBtn}
         </div>
-        ${removeBtn}
+        <div class="fit-card-plans" data-fitting-id="${fit.id}">
+            ${fitPlanChips || fitPlanEmpty}
+        </div>
     </div>`;
 }
 
 function planPoolCardHtml(plan) {
     const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+    const actions = window.doctrineI18n.canCreate
+        ? `<span class="plan-pool-card-actions">
+             <button type="button" class="btn btn-xs btn-link text-muted plan-pool-card-edit" title="${dEscape(dI18n('planEditTooltip'))}"><i class="fa fa-pen"></i></button>
+             <button type="button" class="btn btn-xs btn-link text-danger plan-pool-card-delete" title="${dEscape(dI18n('planDeleteTooltip'))}"><i class="fa fa-trash"></i></button>
+           </span>`
+        : '';
     return `<div class="plan-pool-card" data-plan-id="${plan.id}" data-tier="${plan.tier}">
         <span class="plan-card-grip"><i class="fa fa-grip-vertical"></i></span>
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
+        ${actions}
     </div>`;
 }
 
-function planAttachedCardHtml(plan) {
+function planAttachedCardHtml(plan, scope) {
+    /* scope: 'group' → group-level (✕ uses group-plan-remove)
+              'fit'   → fit-level   (✕ uses fit-plan-remove) */
     const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+    const removeClass = scope === 'fit' ? 'fit-plan-remove' : 'group-plan-remove';
     return `<div class="plan-card-attached" data-plan-id="${plan.id}">
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
-        <button type="button" class="plan-card-remove" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>
+        <button type="button" class="plan-card-remove ${removeClass}" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>
     </div>`;
 }
 
@@ -229,7 +283,7 @@ function wireSortables() {
         }));
     }
 
-    /* Plans pool — items can be cloned/pulled into group plans bodies. */
+    /* Plans pool — items can be cloned/pulled into either group plans bodies or fit plan zones. */
     const planPool = document.getElementById('doctrinePlanPool');
     if (planPool) {
         DoctrineState.sortables.push(new Sortable(planPool, {
@@ -242,6 +296,7 @@ function wireSortables() {
         }));
     }
 
+    /* Group-fittings drop zones (existing behavior). */
     $('.doctrine-group-body').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
@@ -273,6 +328,7 @@ function wireSortables() {
         }));
     });
 
+    /* Group-level plan drop zones. */
     $('.doctrine-group-plans-body').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
@@ -287,20 +343,46 @@ function wireSortables() {
                     evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
                     return;
                 }
-                /* Dedup: if this plan is already attached, drop the clone. */
+                /* Dedup: if already attached, drop the clone. */
                 const existing = $(el).find(`.plan-card-attached[data-plan-id="${planId}"]`);
                 if (existing.length > 0) {
                     evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
                     return;
                 }
 
-                $.ajax({
-                    url: '/fitting/plans/' + planId + '/doctrines/' + groupId,
-                    type: 'POST',
-                    data: {_token: window.doctrineCsrf},
-                    dataType: 'json',
-                    timeout: 10000,
-                }).done(loadDoctrineWorkspace).fail(loadDoctrineWorkspace);
+                attachPlanToDoctrine(planId, groupId)
+                    .done(loadDoctrineWorkspace)
+                    .fail(loadDoctrineWorkspace);
+            },
+        }));
+    });
+
+    /* Per-fit plan drop zones (inside group fit cards). Pool fit cards also have them
+       but attaching there feels surprising (the fit isn't visibly "in" any group yet) —
+       still allowed for symmetry: a plan dragged onto any fit card attaches directly. */
+    $('.fit-card-plans').each(function () {
+        const el = this;
+        DoctrineState.sortables.push(new Sortable(el, {
+            group: {name: 'doctrine-plans', pull: false, put: true},
+            animation: 180,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onAdd: function (evt) {
+                const fittingId = $(el).data('fittingId');
+                const planId = $(evt.item).data('planId');
+                if (!fittingId || !planId) {
+                    evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
+                    return;
+                }
+                const existing = $(el).find(`.plan-card-attached[data-plan-id="${planId}"]`);
+                if (existing.length > 0) {
+                    evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
+                    return;
+                }
+
+                attachPlanToFitting(planId, fittingId)
+                    .done(loadDoctrineWorkspace)
+                    .fail(loadDoctrineWorkspace);
             },
         }));
     });
