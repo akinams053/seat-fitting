@@ -41,8 +41,13 @@ class CorporationSkillReportService
 
         foreach ($fittings as $fitting) {
             $shipSkills = $this->skillMap($this->calculator->calculateForTypeId($fitting->ship_type_id));
-            $minimumSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'minimum', $contextDoctrineId));
-            $advancedSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'advanced', $contextDoctrineId));
+            $minimumList = $this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'minimum', $contextDoctrineId);
+            $advancedList = $this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'advanced', $contextDoctrineId);
+            /* Apply the same advanced-≥-minimum normalization the personal-check path uses,
+               so corp report and personal check stay in lockstep about what "advanced met" means. */
+            $advancedList = $this->personalSkillCheck->normalizeAdvancedAgainstMinimum($minimumList, $advancedList);
+            $minimumSkills = $this->skillMap($minimumList);
+            $advancedSkills = $this->skillMap($advancedList);
 
             $fittingChecks[$fitting->fitting_id] = [
                 'ship' => $shipSkills,

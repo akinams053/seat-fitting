@@ -386,10 +386,14 @@ class FittingController extends Controller
     public function getFittingRequirements($id)
     {
         $fitting = Fitting::findOrFail($id);
+        $minimum = $this->personalSkillCheck->requirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM);
+        $advanced = $this->personalSkillCheck->requirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED);
+        /* Editor sees normalized values so dropdown filter and stored data agree. */
+        $advanced = $this->personalSkillCheck->normalizeAdvancedAgainstMinimum($minimum, $advanced);
 
         return response()->json([
-            'minimum' => $this->personalSkillCheck->requirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM),
-            'advanced' => $this->personalSkillCheck->requirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED),
+            'minimum' => $minimum,
+            'advanced' => $advanced,
         ]);
     }
 
@@ -470,6 +474,13 @@ class FittingController extends Controller
         $fitting = Fitting::findOrFail($id);
         $minimum = $request->input('minimum', []);
         $advanced = $request->input('advanced', []);
+
+        /* Auto-raise advanced level whenever the matching minimum is higher, so the stored
+           data stays consistent with the displayed/checked state. Editor's dropdown filter
+           already prevents most inversions on the way in; this is the safety net for the
+           "raised minimum after advanced was set" path. */
+        $advanced = $this->normalizeAdvancedPayloadAgainstMinimum($minimum, $advanced);
+
         $requirements = collect($minimum)->merge($advanced);
         $skillIds = $requirements->pluck('skill_type_id')->map(function ($skillId) {
             return (int) $skillId;
@@ -487,6 +498,29 @@ class FittingController extends Controller
         $this->skillRequirementSync->replaceRequirements($fitting, FittingSkillRequirement::TIER_ADVANCED, $advanced);
 
         return $this->getFittingRequirements($id);
+    }
+
+    /**
+     * Save-side mirror of PersonalSkillCheckService::normalizeAdvancedAgainstMinimum, but
+     * operating on the request payload shape (skill_type_id instead of typeId).
+     */
+    private function normalizeAdvancedPayloadAgainstMinimum(array $minimum, array $advanced): array
+    {
+        if (empty($minimum) || empty($advanced)) {
+            return $advanced;
+        }
+
+        $minByType = collect($minimum)->keyBy('skill_type_id');
+
+        foreach ($advanced as &$advReq) {
+            $minReq = $minByType->get($advReq['skill_type_id']);
+            if ($minReq && (int) $minReq['level'] > (int) $advReq['level']) {
+                $advReq['level'] = (int) $minReq['level'];
+            }
+        }
+        unset($advReq);
+
+        return $advanced;
     }
 
     public function saveDoctrine(DoctrineValidation $request)

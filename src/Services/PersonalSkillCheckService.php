@@ -25,6 +25,7 @@ class PersonalSkillCheckService
            and no doctrine inheritance — keeps fit-in-D and fit-in-D2 cleanly independent. */
         $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM, $contextDoctrineId);
         $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED, $contextDoctrineId);
+        $advanced = $this->normalizeAdvancedAgainstMinimum($minimum, $advanced);
         $allRequirements = collect($minimum)->merge($advanced)->unique('typeId')->values()->all();
         $characters = $this->characters->addMissingSkills($this->characters->forCurrentUser(), $allRequirements);
 
@@ -48,6 +49,7 @@ class PersonalSkillCheckService
         foreach ($fittings as $fitting) {
             $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM, $doctrine->id);
             $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED, $doctrine->id);
+            $advanced = $this->normalizeAdvancedAgainstMinimum($minimum, $advanced);
             $requirements = collect($minimum)->merge($advanced)->unique('typeId')->values()->all();
             $allRequirements = collect($allRequirements)->merge($requirements)->unique('typeId')->values()->all();
 
@@ -75,6 +77,36 @@ class PersonalSkillCheckService
             'fittings' => $fittingResults,
             'characters' => $characters->all(),
         ];
+    }
+
+    /**
+     * Output-side normalization: for every advanced requirement whose matching minimum (same
+     * skill type) has a HIGHER level, silently raise the advanced level to match. Keeps the
+     * user out of the "advanced check passes but minimum fails" trap without mutating the
+     * stored data — purely a presentation/check-time fix-up.
+     *
+     * Doesn't add new advanced entries for skills only in minimum (those aren't "lower than
+     * minimum", they're just not advanced requirements). Tags raised entries with
+     * `auto_raised_to_minimum` so the UI can optionally annotate them.
+     */
+    public function normalizeAdvancedAgainstMinimum(array $minimum, array $advanced): array
+    {
+        if (empty($minimum) || empty($advanced)) {
+            return $advanced;
+        }
+
+        $minByType = collect($minimum)->keyBy('typeId');
+
+        foreach ($advanced as &$advReq) {
+            $minReq = $minByType->get($advReq['typeId']);
+            if ($minReq && (int) $minReq['level'] > (int) $advReq['level']) {
+                $advReq['level'] = (int) $minReq['level'];
+                $advReq['auto_raised_to_minimum'] = true;
+            }
+        }
+        unset($advReq);
+
+        return $advanced;
     }
 
     /**

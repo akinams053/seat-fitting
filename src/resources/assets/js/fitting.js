@@ -196,7 +196,18 @@ function initializeFittingPage() {
         addRequirementToEditor($(this).data('tier'));
     });
     $(document).on('click', '.removeRequirement', function () {
-        $(this).closest('tr').remove();
+        const tr = $(this).closest('tr');
+        const typeId = tr.data('skill-type-id');
+        const isMinimum = tr.closest('tbody').attr('id') === 'minimumRequirementsBody';
+        tr.remove();
+        /* Removing a minimum row clears the floor for its matching advanced row, which
+           should reopen the lower options in the dropdown. */
+        if (isMinimum && typeId) refreshAdvancedRowFloor(typeId);
+    });
+    /* Live re-filter the matching advanced dropdown when the user changes a minimum level. */
+    $(document).on('change', '#minimumRequirementsBody .requirementLevel', function () {
+        const typeId = $(this).closest('tr').data('skill-type-id');
+        if (typeId) refreshAdvancedRowFloor(typeId);
     });
     $(document).on('click', '#saveRequirements', saveRequirements);
 
@@ -819,18 +830,35 @@ function renderRequirementsEditor(data) {
     $('#minimumRequirementsBody').empty();
     $('#advancedRequirementsBody').empty();
     for (const skill of data.minimum || []) {
-        $('#minimumRequirementsBody').append(drawRequirementEditorRow(skill, skill.source || 'manual'));
+        $('#minimumRequirementsBody').append(drawRequirementEditorRow(skill, skill.source || 'manual', 'minimum'));
     }
     for (const skill of data.advanced || []) {
-        $('#advancedRequirementsBody').append(drawRequirementEditorRow(skill, skill.source || 'manual'));
+        $('#advancedRequirementsBody').append(drawRequirementEditorRow(skill, skill.source || 'manual', 'advanced'));
     }
 }
 
-function drawRequirementEditorRow(skill, source) {
-    const levelOptions = [1, 2, 3, 4, 5].map(function (level) {
-        const selected = parseInt(skill.level) === level ? 'selected' : '';
-        return `<option value="${level}" ${selected}>${level}</option>`;
-    }).join('');
+/* Look up the current minimum-tier level for a skill from the live DOM. Returns 0 if the
+   skill isn't in the minimum table — caller treats that as "no floor". */
+function minimumLevelForSkill(typeId) {
+    const row = $('#minimumRequirementsBody').find(`tr[data-skill-type-id="${typeId}"]`);
+    if (!row.length) return 0;
+    return parseInt(row.find('.requirementLevel').val()) || 0;
+}
+
+function drawRequirementEditorRow(skill, source, tier) {
+    /* Advanced rows can't be set below the matching minimum — filter the dropdown to
+       >= floor, and bump the displayed selection to at least floor so users always see
+       a consistent (and saveable) value. Minimum rows are unconstrained. */
+    const floor = tier === 'advanced' ? minimumLevelForSkill(skill.typeId) : 0;
+    const stored = parseInt(skill.level) || 1;
+    const selected = Math.max(stored, floor || 1);
+    const levelOptions = [1, 2, 3, 4, 5]
+        .filter(level => level >= floor)
+        .map(function (level) {
+            const sel = selected === level ? 'selected' : '';
+            return `<option value="${level}" ${sel}>${level}</option>`;
+        })
+        .join('');
     return `<tr data-skill-type-id="${skill.typeId}" data-source="${source}">
         <td>${escapeHtml(skill.typeName)} <small class="text-muted">(${skill.typeId})</small></td>
         <td><select class="form-control form-control-sm requirementLevel">${levelOptions}</select></td>
@@ -910,13 +938,34 @@ function addRequirementToEditor(tier) {
     const existing = body.find(`tr[data-skill-type-id="${skill.typeId}"]`);
     if (existing.length) {
         existing.find('.requirementLevel').val(level);
+        if (tier === 'minimum') refreshAdvancedRowFloor(skill.typeId);
         return;
     }
     body.append(drawRequirementEditorRow({
         typeId: skill.typeId,
         typeName: skill.typeName,
         level: level,
-    }, 'custom'));
+    }, 'custom', tier));
+    /* Adding/changing a minimum row can push the matching advanced floor up — keep the
+       advanced dropdown in sync. */
+    if (tier === 'minimum') refreshAdvancedRowFloor(skill.typeId);
+}
+
+/* Rebuild the advanced row's level dropdown for the given skill so its options always
+   start at the current minimum-tier level. The displayed value is bumped to floor if it
+   was below. Called whenever the matching minimum row is added, changed, or removed. */
+function refreshAdvancedRowFloor(typeId) {
+    const advRow = $('#advancedRequirementsBody').find(`tr[data-skill-type-id="${typeId}"]`);
+    if (!advRow.length) return;
+    const floor = minimumLevelForSkill(typeId);
+    const sel = advRow.find('.requirementLevel');
+    const currentLevel = parseInt(sel.val()) || 1;
+    const newLevel = Math.max(currentLevel, floor || 1);
+    sel.empty();
+    [1, 2, 3, 4, 5].filter(level => level >= floor).forEach(level => {
+        const selected = level === newLevel ? 'selected' : '';
+        sel.append(`<option value="${level}" ${selected}>${level}</option>`);
+    });
 }
 
 function collectRequirements(body, defaultSource) {
