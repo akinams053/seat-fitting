@@ -617,14 +617,11 @@ function renderSkillBar(currentLevel, requiredLevel) {
         else if (isMissingTarget) cls = 'is-missing';
         segments.push(`<div class="skill-bar-segment ${cls}"></div>`);
     }
-    /* Marker position: center of required segment.
-       Each segment occupies (100 / 5)% horizontally; gaps are small so we
-       approximate the center as ((req - 0.5) / 5) * 100% */
-    const markerLeft = requiredLevel > 0 ? ((requiredLevel - 0.5) / 5) * 100 : 0;
-    const marker = requiredLevel > 0
-        ? `<div class="skill-bar-marker" style="left: ${markerLeft.toFixed(2)}%"></div>`
+    const targetCls = requiredLevel === 0 ? '' : (passed ? 'is-passing' : 'is-missing');
+    const target = requiredLevel > 0
+        ? `<span class="skill-bar-target ${targetCls}">Lv ${requiredLevel}</span>`
         : '';
-    return `<div class="skill-bar">${marker}${segments.join('')}</div>`;
+    return `<div class="skill-bar-wrap"><div class="skill-bar">${segments.join('')}</div>${target}</div>`;
 }
 
 function formatTime(points) {

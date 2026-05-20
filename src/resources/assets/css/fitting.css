@@ -74,14 +74,14 @@
     border-color: var(--fit-red-soft);
 }
 .status-pill.is-entry {
-    background: var(--fit-amber-soft);
-    color: var(--fit-amber-text);
-    border-color: var(--fit-amber-soft);
-}
-.status-pill.is-advanced {
     background: var(--fit-green-soft);
     color: var(--fit-green-text);
     border-color: var(--fit-green-soft);
+}
+.status-pill.is-advanced {
+    background: var(--fit-amber-soft);
+    color: var(--fit-amber-text);
+    border-color: var(--fit-amber-soft);
 }
 .status-pill.is-not-set {
     background: var(--fit-neutral-soft);
@@ -280,19 +280,26 @@
     color: var(--fit-red-text);
 }
 
-.skill-bar {
-    position: relative;
+.skill-bar-wrap {
     display: flex;
-    gap: 2px;
+    align-items: center;
+    gap: 8px;
+}
+.skill-bar {
+    flex: 1;
+    display: flex;
+    gap: 3px;
     height: 12px;
 }
 .skill-bar-segment {
     flex: 1;
-    border-radius: 2px;
+    border-radius: 4px;
     background: var(--fit-neutral-soft);
     border: 1px solid #e1e5e9;
     transition: background-color 200ms ease, border-color 200ms ease;
 }
+.skill-bar-segment:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+.skill-bar-segment:last-child  { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
 .skill-bar-segment.is-filled {
     background: var(--fit-green);
     border-color: var(--fit-green);
@@ -306,17 +313,36 @@
     background: var(--fit-green-soft);
     border-color: var(--fit-green-soft);
 }
-.skill-bar-marker {
-    position: absolute;
-    top: -10px;
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid var(--fit-marker);
-    transform: translateX(-50%);
-    pointer-events: none;
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+.skill-bar-target {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--fit-neutral-soft);
+    color: var(--fit-neutral-text);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    border: 1px solid #e1e5e9;
+    transition: background-color var(--fit-transition), color var(--fit-transition), border-color var(--fit-transition);
+    white-space: nowrap;
+}
+.skill-bar-target.is-passing {
+    background: var(--fit-green-soft);
+    color: var(--fit-green-text);
+    border-color: var(--fit-green-soft);
+}
+.skill-bar-target.is-missing {
+    background: var(--fit-red-soft);
+    color: var(--fit-red-text);
+    border-color: var(--fit-red-soft);
+}
+.skill-bar-target::before {
+    content: '▶';
+    font-size: 8px;
+    opacity: 0.7;
 }
 @keyframes fitSegmentIn {
     from { transform: scaleY(0.6); opacity: 0.4; }
@@ -664,4 +690,41 @@
 #report td.report-status-cell {
     text-align: center;
     vertical-align: middle;
+}
+
+.report-totals-summary {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--fit-neutral-soft);
+    border-radius: var(--fit-radius-lg);
+}
+.report-totals-header {
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #2c3038;
+}
+.report-totals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.report-totals-cell {
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: var(--fit-radius);
+    border: 1px solid #e6e9ed;
+}
+.report-totals-cell-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: #2c3038;
+}
+.report-totals-cell-sub {
+    font-size: 11px;
+}
+
+/* select2 inside form-row should fill its column; default behaviour shrinks. */
+.report-target-toggle + .form-row .select2-container {
+    width: 100% !important;
 }
