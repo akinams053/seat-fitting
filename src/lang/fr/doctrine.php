@@ -26,6 +26,7 @@ return [
     'workspace_pool_search_placeholder' => 'Rechercher un fit ou un vaisseau...',
     'workspace_group_empty_hint' => 'Glissez des fittings ici',
     'workspace_pool_empty_hint' => 'Aucun fitting disponible',
+    'workspace_groups_empty_hint' => 'Aucun groupe de fittings. Cliquez sur « Nouveau groupe » pour en créer un.',
     'workspace_rename_btn' => 'Renommer',
     'workspace_remove_fit_btn' => 'Retirer du groupe',
     'workspace_hint' => 'Astuce : faites glisser un fitting de droite vers un groupe à gauche. Un même fitting peut appartenir à plusieurs groupes.',

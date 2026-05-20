@@ -388,6 +388,11 @@ function runGroupCheck(doctrineId) {
         $('.fit-tree-item').removeClass('is-selected');
         $('#fitDetail').hide();
         $('#fitDetailEmpty').show();
+        /* Group check has no single target — wipe any lingering requirement editor state
+           so the manage-mode save button can't accidentally overwrite the last-selected fit. */
+        $('#fittingId').val('');
+        $('#requirementsFittingId').val('');
+        $('#requirements-box').hide();
         renderSkillCheck(result);
     });
 }
@@ -461,7 +466,9 @@ function renderTabBadge(tier, state) {
     badge.removeClass('is-failed is-entry is-advanced is-not-set').show();
     const i18n = window.fittingI18n || {};
     if (state === 'passed') {
-        badge.addClass('is-advanced').text('✓');
+        /* Use is-entry (green) as the universal "tab passed" cue — both tiers should look
+           identical when met. is-advanced is reserved for the overall fitting status pill. */
+        badge.addClass('is-entry').text('✓');
     } else if (state === 'failed') {
         badge.addClass('is-failed').text('✕');
     } else {

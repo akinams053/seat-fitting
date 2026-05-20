@@ -26,6 +26,7 @@ return [
     'workspace_pool_search_placeholder' => '搜索配装或舰船…',
     'workspace_group_empty_hint' => '从右侧拖入配装到此处',
     'workspace_pool_empty_hint' => '当前没有可用配装',
+    'workspace_groups_empty_hint' => '暂无配装分组，点击右上角"新建分组"创建一个',
     'workspace_rename_btn' => '重命名',
     'workspace_remove_fit_btn' => '从分组移除',
     'workspace_hint' => '提示：把右侧配装拖入左侧分组以加入；同一配装可放入多个分组。',

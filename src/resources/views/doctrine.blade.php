@@ -50,6 +50,7 @@
             workspaceNewGroupPlaceholder: "{{trans('fitting::doctrine.workspace_new_group_placeholder')}}",
             workspaceGroupEmptyHint: "{{trans('fitting::doctrine.workspace_group_empty_hint')}}",
             workspacePoolEmptyHint: "{{trans('fitting::doctrine.workspace_pool_empty_hint')}}",
+            workspaceGroupsEmptyHint: "{{trans('fitting::doctrine.workspace_groups_empty_hint')}}",
             workspaceRenameBtn: "{{trans('fitting::doctrine.workspace_rename_btn')}}",
             deleteDoctrineBtn: "{{trans('fitting::doctrine.delete_doctrine_btn')}}",
             workspaceRemoveFitBtn: "{{trans('fitting::doctrine.workspace_remove_fit_btn')}}",

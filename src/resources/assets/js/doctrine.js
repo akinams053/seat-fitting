@@ -95,7 +95,7 @@ function renderGroups() {
     container.empty();
 
     if (!DoctrineState.groups.length) {
-        container.append(`<div class="fit-tree-empty">${dEscape(dI18n('workspacePoolEmptyHint'))}</div>`);
+        container.append(`<div class="fit-tree-empty">${dEscape(dI18n('workspaceGroupsEmptyHint'))}</div>`);
         return;
     }
 
@@ -105,7 +105,7 @@ function renderGroups() {
                <button class="btn btn-xs btn-link text-danger doctrine-group-delete" title="${dEscape(dI18n('deleteDoctrineBtn'))}"><i class="fa fa-trash"></i></button>`
             : '';
 
-        const items = group.fittings.map(fitCardHtml).join('');
+        const items = group.fittings.map(g => fitCardHtml(g, true)).join('');
         const emptyHint = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupEmptyHint'))}</div>`;
 
         container.append(`<div class="doctrine-group" data-group-id="${group.id}">
@@ -131,19 +131,22 @@ function renderPool() {
     }
 
     for (const fit of DoctrineState.pool) {
-        pool.append(fitCardHtml(fit));
+        pool.append(fitCardHtml(fit, false));
     }
 }
 
-function fitCardHtml(fit) {
+function fitCardHtml(fit, inGroup) {
     const iconUrl = `https://images.evetech.net/types/${fit.typeID}/icon?size=32`;
+    const removeBtn = inGroup
+        ? `<button class="fit-card-remove" type="button" title="${dEscape(dI18n('workspaceRemoveFitBtn'))}"><i class="fa fa-times"></i></button>`
+        : '';
     return `<div class="fit-card" data-fitting-id="${fit.id}">
         <img class="fit-card-icon" src="${iconUrl}" alt="">
         <div class="fit-card-body">
             <div class="fit-card-name">${dEscape(fit.name)}</div>
             <div class="fit-card-ship">${dEscape(fit.shipType || '')}</div>
         </div>
-        <button class="fit-card-remove" type="button" title="Remove"><i class="fa fa-times"></i></button>
+        ${removeBtn}
     </div>`;
 }
 

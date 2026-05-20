@@ -724,7 +724,8 @@
     font-size: 11px;
 }
 
-/* select2 inside form-row should fill its column; default behaviour shrinks. */
-.report-target-toggle + .form-row .select2-container {
+/* select2 inside report dropdowns should fill its column; default behaviour shrinks. */
+#doctrineSelectGroup .select2-container,
+#fittingSelectGroup .select2-container {
     width: 100% !important;
 }

@@ -26,6 +26,7 @@ return [
     'workspace_pool_search_placeholder' => 'Search fitting or ship...',
     'workspace_group_empty_hint' => 'Drag fittings here',
     'workspace_pool_empty_hint' => 'No fittings available',
+    'workspace_groups_empty_hint' => 'No fitting groups yet. Click "New Group" to create one.',
     'workspace_rename_btn' => 'Rename',
     'workspace_remove_fit_btn' => 'Remove from group',
     'workspace_hint' => 'Tip: drag a fitting from the right into a group on the left. The same fitting can belong to multiple groups.',
