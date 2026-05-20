@@ -160,6 +160,63 @@ class FittingController extends Controller
         return $fitnames;
     }
 
+    public function getFittingTree()
+    {
+        $fittings = Fitting::with(['ship'])->orderBy('name')->get();
+
+        $fittingPayloads = [];
+        foreach ($fittings as $fit) {
+            $fittingPayloads[$fit->fitting_id] = [
+                'id' => $fit->fitting_id,
+                'name' => $fit->name,
+                'shipType' => $fit->ship?->typeName,
+                'typeID' => $fit->ship_type_id,
+            ];
+        }
+
+        $doctrines = Doctrine::with('fittings:fitting_id')->orderBy('name')->get();
+        $groups = [];
+        $assignedFitIds = [];
+
+        foreach ($doctrines as $doctrine) {
+            $fitIds = $doctrine->fittings->pluck('fitting_id')->all();
+            $assignedFitIds = array_merge($assignedFitIds, $fitIds);
+
+            $items = [];
+            foreach ($fitIds as $fid) {
+                if (isset($fittingPayloads[$fid])) {
+                    $items[] = $fittingPayloads[$fid];
+                }
+            }
+            usort($items, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
+
+            $groups[] = [
+                'id' => $doctrine->id,
+                'name' => $doctrine->name,
+                'fittings' => $items,
+            ];
+        }
+
+        $assignedFitIds = array_unique($assignedFitIds);
+        $ungrouped = [];
+        foreach ($fittingPayloads as $fid => $payload) {
+            if (! in_array($fid, $assignedFitIds, true)) {
+                $ungrouped[] = $payload;
+            }
+        }
+        usort($ungrouped, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
+
+        if (! empty($ungrouped)) {
+            $groups[] = [
+                'id' => null,
+                'name' => trans('fitting::fitting.tree_ungrouped_label'),
+                'fittings' => $ungrouped,
+            ];
+        }
+
+        return response()->json($groups);
+    }
+
     public function getEftFittingById($id)
     {
         $fitting = Fitting::findOrFail($id);
@@ -424,39 +481,173 @@ class FittingController extends Controller
         return redirect()->route('cryptafitting::doctrineview');
     }
 
+    public function getDoctrineWorkspace()
+    {
+        $fittings = Fitting::with('ship')->orderBy('name')->get();
+        $pool = $fittings->map(fn ($f) => [
+            'id' => $f->fitting_id,
+            'name' => $f->name,
+            'shipType' => $f->ship?->typeName,
+            'typeID' => $f->ship_type_id,
+        ])->values();
+
+        $doctrines = Doctrine::with('fittings:fitting_id')->orderBy('name')->get();
+        $byId = $fittings->keyBy('fitting_id');
+        $groups = $doctrines->map(function (Doctrine $d) use ($byId) {
+            $items = $d->fittings->map(function ($pivotFit) use ($byId) {
+                $f = $byId->get($pivotFit->fitting_id);
+                if (! $f) {
+                    return null;
+                }
+
+                return [
+                    'id' => $f->fitting_id,
+                    'name' => $f->name,
+                    'shipType' => $f->ship?->typeName,
+                    'typeID' => $f->ship_type_id,
+                ];
+            })->filter()->values();
+
+            return [
+                'id' => $d->id,
+                'name' => $d->name,
+                'fittings' => $items,
+            ];
+        })->values();
+
+        return response()->json([
+            'groups' => $groups,
+            'pool' => $pool,
+        ]);
+    }
+
+    public function createDoctrine(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:191',
+        ]);
+
+        $doctrine = Doctrine::create(['name' => $data['name']]);
+        DoctrineUpdated::dispatch($doctrine);
+
+        return response()->json([
+            'id' => $doctrine->id,
+            'name' => $doctrine->name,
+            'fittings' => [],
+        ]);
+    }
+
+    public function renameDoctrine(Request $request, $id)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:191',
+        ]);
+
+        $doctrine = Doctrine::findOrFail($id);
+        $doctrine->name = $data['name'];
+        $doctrine->save();
+
+        DoctrineUpdated::dispatch($doctrine);
+
+        return response()->json([
+            'id' => $doctrine->id,
+            'name' => $doctrine->name,
+        ]);
+    }
+
+    public function deleteDoctrine($id)
+    {
+        $doctrine = Doctrine::findOrFail($id);
+        $doctrine->fittings()->detach();
+        $doctrine->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function attachFittingToDoctrine($id, $fittingId)
+    {
+        $doctrine = Doctrine::findOrFail($id);
+        $fitting = Fitting::findOrFail($fittingId);
+        $doctrine->fittings()->syncWithoutDetaching([$fitting->fitting_id]);
+
+        DoctrineUpdated::dispatch($doctrine);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function detachFittingFromDoctrine($id, $fittingId)
+    {
+        $doctrine = Doctrine::findOrFail($id);
+        $doctrine->fittings()->detach((int) $fittingId);
+
+        DoctrineUpdated::dispatch($doctrine);
+
+        return response()->json(['ok' => true]);
+    }
+
     public function viewDoctrineReport()
     {
-        $doctrines = Doctrine::all();
-        $corps = CorporationInfo::all();
-        $alliances = [];
+        $target = $this->resolveFixedReportTarget();
+        $doctrines = Doctrine::orderBy('name')->get();
+        $fittings = Fitting::with('ship')->orderBy('name')->get()->map(fn ($f) => [
+            'id' => $f->fitting_id,
+            'name' => $f->name,
+            'shipType' => $f->ship?->typeName,
+        ]);
 
-        $allids = [];
-
-        foreach ($corps as $corp) {
-            if (! is_null($corp->alliance_id)) {
-                array_push($allids, $corp->alliance_id);
-            }
-        }
-
-        $alliances = Alliance::whereIn('alliance_id', $allids)->get();
-
-        return view('fitting::doctrinereport', compact('doctrines', 'corps', 'alliances'));
+        return view('fitting::doctrinereport', [
+            'doctrines' => $doctrines,
+            'fittings' => $fittings,
+            'targetAlliance' => $target['alliance'],
+            'targetCorporation' => $target['corporation'],
+        ]);
     }
 
     public function runReport(Request $request)
     {
         $request->validate([
-            'alliances' => 'present|array',
-            'alliances.*' => 'integer',
-            'corporations' => 'present|array',
-            'corporations.*' => 'integer',
-            'doctrine' => 'required|integer',
+            'doctrine' => 'nullable|integer',
+            'fitting' => 'nullable|integer',
         ]);
 
-        return response()->json($this->corporationSkillReport->run(
-            $request->alliances,
-            $request->corporations,
-            $request->doctrine,
-        ));
+        $target = $this->resolveFixedReportTarget();
+        $allianceIds = [$target['alliance']->alliance_id];
+        $corporationIds = [$target['corporation']->corporation_id];
+
+        if ($request->filled('fitting')) {
+            return response()->json($this->corporationSkillReport->runForFitting(
+                $allianceIds,
+                $corporationIds,
+                (int) $request->input('fitting'),
+            ));
+        }
+
+        if ($request->filled('doctrine')) {
+            return response()->json($this->corporationSkillReport->run(
+                $allianceIds,
+                $corporationIds,
+                (int) $request->input('doctrine'),
+            ));
+        }
+
+        abort(422, 'Either doctrine or fitting must be provided.');
+    }
+
+    private function resolveFixedReportTarget(): array
+    {
+        $alliance = Alliance::where('ticker', 'FRT')->first();
+        abort_if($alliance === null, 500, trans('fitting::doctrine.report_alliance_not_found'));
+
+        $corporation = CorporationInfo::where('name', 'YeLuo-XingHai')
+            ->where('alliance_id', $alliance->alliance_id)
+            ->first();
+
+        if ($corporation === null) {
+            $corporation = CorporationInfo::where('name', 'YeLuo-XingHai')->first();
+        }
+
+        abort_if($corporation === null, 500, trans('fitting::doctrine.report_corporation_not_found'));
+
+        return ['alliance' => $alliance, 'corporation' => $corporation];
     }
 }

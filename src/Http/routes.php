@@ -55,6 +55,11 @@ Route::group([
             'uses' => 'FittingController@saveFitting',
             'middleware' => 'can:fitting.create',
         ]);
+        Route::get('/tree', [
+            'as' => 'cryptafitting::fitTree',
+            'uses' => 'FittingController@getFittingTree',
+            'middleware' => 'can:fitting.view',
+        ]);
         Route::get('/skill-groups', [
             'as' => 'cryptafitting::skillGroups',
             'uses' => 'FittingController@getSkillGroups',
@@ -118,6 +123,36 @@ Route::group([
         Route::post('/addDoctrine', [
             'as' => 'cryptafitting::addDoctrine',
             'uses' => 'FittingController@saveDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::get('/doctrine-workspace', [
+            'as' => 'cryptafitting::doctrineWorkspace',
+            'uses' => 'FittingController@getDoctrineWorkspace',
+            'middleware' => 'can:fitting.doctrineview',
+        ]);
+        Route::post('/doctrine', [
+            'as' => 'cryptafitting::createDoctrine',
+            'uses' => 'FittingController@createDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::patch('/doctrine/{id}', [
+            'as' => 'cryptafitting::renameDoctrine',
+            'uses' => 'FittingController@renameDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::delete('/doctrine/{id}', [
+            'as' => 'cryptafitting::deleteDoctrine',
+            'uses' => 'FittingController@deleteDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::post('/doctrine/{id}/fittings/{fittingId}', [
+            'as' => 'cryptafitting::attachFittingToDoctrine',
+            'uses' => 'FittingController@attachFittingToDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::delete('/doctrine/{id}/fittings/{fittingId}', [
+            'as' => 'cryptafitting::detachFittingFromDoctrine',
+            'uses' => 'FittingController@detachFittingFromDoctrine',
             'middleware' => 'can:fitting.create',
         ]);
         Route::get('/getdoctrineedit/{id}', [

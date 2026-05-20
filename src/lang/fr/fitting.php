@@ -13,6 +13,7 @@ return [
     'run_group_check_btn' => 'Contrôler ce groupe',
 
     'add_new_fitting_tooltip' => 'Ajouter un nouveau fitting',
+    'add_new_fitting_btn' => 'Nouveau fitting',
 
     'col_ship_type' => 'Vaisseau',
     'col_fit_name' => 'Nom du fit',
@@ -20,6 +21,10 @@ return [
 
     'search_ship_placeholder' => 'Rechercher par type de vaisseau...',
     'search_fit_placeholder' => 'Rechercher par nom de fit...',
+    'tree_search_placeholder' => 'Rechercher un fit ou un vaisseau...',
+    'tree_ungrouped_label' => 'Fittings sans groupe',
+    'tree_check_group_btn' => 'Contrôler ce groupe',
+    'tree_empty_hint' => 'Aucun fitting',
     'datatable_search' => 'Recherche globale :',
     'datatable_length' => 'Afficher _MENU_ fittings',
     'datatable_info' => 'Affichage de _START_ à _END_ sur _TOTAL_ fittings',
@@ -50,10 +55,18 @@ return [
     'fit_drone_bay_title' => 'Baie de drones',
     'fit_cargo_title' => 'Soute',
     'fit_drone_bay_number' => 'Nombre',
+    'fit_details_title' => 'Détails du fitting',
+    'fit_select_hint' => 'Sélectionnez un fitting à gauche pour voir les détails',
 
     'required_skills_title' => 'Contrôle de compétences',
-    'minimum_requirements_title' => 'Exigences minimales',
+    'minimum_requirements_title' => 'Exigences de base',
     'advanced_requirements_title' => 'Exigences avancées',
+    'tab_entry_label' => 'Base',
+    'tab_advanced_label' => 'Avancé',
+    'status_failed' => 'Non atteint',
+    'status_entry_passed' => 'Base atteinte',
+    'status_advanced_passed' => 'Avancé atteint',
+    'status_advanced_not_set' => 'Avancé non configuré',
     'custom_requirements_title' => 'Compétences personnalisées',
     'manage_requirements_title' => 'Gérer les exigences de compétences',
     'skills_required_level_header' => 'Niveau requis',

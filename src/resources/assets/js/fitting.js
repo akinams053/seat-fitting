@@ -1,250 +1,663 @@
+/* global $, jQuery */
+
 function escapeHtml(value) {
-    return $('<div>').text(value || '').html();
+    return $('<div>').text(value == null ? '' : value).html();
 }
 
-function fillFittingWindow(result) {
-    if (result) {
-        $('#fitting-window').show();
-        $('#middle-header').text(result.shipname + ', ' + result.fitname);
-        $('#showeft').val(result.eft);
+function fitI18n(key) {
+    return (window.fittingI18n || {})[key] || key;
+}
 
-        const exportLinks = $('#exportLinks');
-        exportLinks.empty();
-        for (const link of result.exportLinks) {
-            exportLinks.append(`<a href="${link.url}" class="list-group-item list-group-item-action">${escapeHtml(link.name)}</a>`);
-        }
+/* ============================================================
+ *  State container — keeps the most recent fetched payloads so
+ *  switching character / tab / fitting does not re-hit the server.
+ * ============================================================ */
+const FittingState = {
+    treeGroups: [],
+    selectedFittingId: null,
+    selectedFittingName: '',
+    selectedShipName: '',
+    skillsPayload: null,
+    activeTier: 'minimum',
+};
 
-        if (window.fittingManageMode) {
-            $('#eftexport').show();
-            exportLinks.show();
+/* ============================================================
+ *  Status computation — shared by personal check & corp report.
+ * ============================================================ */
+function computeFittingStatus(check) {
+    if (!check) return 'failed';
+    const minimum = !!check.minimum;
+    const advanced = check.advanced;
+    if (!minimum) return 'failed';
+    if (advanced === true) return 'advanced';
+    if (advanced === null || advanced === undefined) return 'entry';
+    return 'entry';
+}
+
+function statusPillHtml(status, options) {
+    options = options || {};
+    const sizeClass = options.large ? 'is-lg' : '';
+    const i18n = window.fittingI18n || {};
+    let cls = 'is-not-set';
+    let label = i18n.statusAdvancedNotSet || '';
+    if (status === 'failed') {
+        cls = 'is-failed';
+        label = i18n.statusFailed || 'Not Met';
+    } else if (status === 'entry') {
+        cls = 'is-entry';
+        label = i18n.statusEntry || 'Baseline Met';
+    } else if (status === 'advanced') {
+        cls = 'is-advanced';
+        label = i18n.statusAdvanced || 'Advanced Met';
+    }
+    return `<span class="status-pill ${cls} ${sizeClass}">${escapeHtml(label)}</span>`;
+}
+
+/* ============================================================
+ *  Fitting tree (left column)
+ * ============================================================ */
+function initializeFittingPage() {
+    if ($('#fitTree').length === 0) return;
+    loadFittingTree();
+
+    $(document).on('input', '#fitTreeSearch', function () {
+        filterFitTree($(this).val());
+    });
+
+    $(document).on('click', '.fit-tree-group-header', function (evt) {
+        if ($(evt.target).closest('.fit-tree-group-action').length) return;
+        const group = $(this).closest('.fit-tree-group');
+        group.attr('data-expanded', group.attr('data-expanded') === 'true' ? 'false' : 'true');
+    });
+
+    $(document).on('click', '.fit-tree-group-action[data-action="check-group"]', function (evt) {
+        evt.stopPropagation();
+        const doctrineId = $(this).data('doctrineId');
+        if (!doctrineId) return;
+        runGroupCheck(doctrineId);
+    });
+
+    $(document).on('click', '.fit-tree-item', function (evt) {
+        if ($(evt.target).closest('.fit-tree-item-actions').length) return;
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        const ship = $(this).data('ship');
+        selectFitting(id, name, ship);
+    });
+
+    $(document).on('click', '.fit-tree-item-action-edit', function (evt) {
+        evt.stopPropagation();
+        const id = $(this).closest('.fit-tree-item').data('id');
+        $('#fitEditModal').modal('show');
+        $('#fitSelection').val(id);
+        $.ajax({
+            url: '/fitting/geteftfittingbyid/' + id,
+            type: 'GET',
+            timeout: 10000,
+        }).done(function (result) {
+            $('textarea#eftfitting').val(result);
+        });
+    });
+
+    $(document).on('click', '.fit-tree-item-action-delete', function (evt) {
+        evt.stopPropagation();
+        const id = $(this).closest('.fit-tree-item').data('id');
+        $('#fitConfirmModal').modal('show');
+        $('#fitSelection').val(id);
+    });
+
+    /* Detail slot expand/collapse */
+    $(document).on('click', '.fit-detail-slot-header', function () {
+        const slot = $(this).closest('.fit-detail-slot');
+        slot.attr('data-expanded', slot.attr('data-expanded') === 'true' ? 'false' : 'true');
+    });
+
+    /* Tabs */
+    $(document).on('click', '.skill-check-tab', function () {
+        const tier = $(this).data('tier');
+        if (!tier) return;
+        $('.skill-check-tab:not(.req-tab)').removeClass('is-active');
+        $(this).addClass('is-active');
+        FittingState.activeTier = tier;
+        renderActiveSkillTab();
+    });
+
+    $(document).on('click', '.req-tab', function () {
+        const tier = $(this).data('tier');
+        $('.req-tab').removeClass('is-active');
+        $(this).addClass('is-active');
+        $('.req-tier-panel').hide();
+        $('.req-tier-panel[data-tier="' + tier + '"]').show();
+    });
+
+    $(document).on('change', '#characterSpinner', function () {
+        if (FittingState.skillsPayload) renderSkillCheck(FittingState.skillsPayload);
+    });
+
+    /* Skill group expand */
+    $(document).on('click', '.skill-group-header', function () {
+        const group = $(this).closest('.skill-group');
+        group.attr('data-expanded', group.attr('data-expanded') === 'true' ? 'false' : 'true');
+    });
+
+    /* Requirement editor */
+    $(document).on('change', '.skillGroupSelect', function () {
+        resetRequirementSkillSelect($(this).data('tier'));
+    });
+    $(document).on('click', '.addRequirement', function () {
+        addRequirementToEditor($(this).data('tier'));
+    });
+    $(document).on('click', '.removeRequirement', function () {
+        $(this).closest('tr').remove();
+    });
+    $(document).on('click', '#saveRequirements', saveRequirements);
+
+    $('#addFitting').on('click', function () {
+        $('#fitEditModal').modal('show');
+        $('#fitSelection').val('0');
+        $('textarea#eftfitting').val('');
+    });
+
+    /* Delete confirm inside modal */
+    $('#deleteConfirm').on('click', function () {
+        const id = $('#fitSelection').val();
+        if (!id || id === '0') return;
+        $.ajax({
+            url: '/fitting/delfittingbyid/' + id,
+            type: 'GET',
+            timeout: 10000,
+        }).done(function () {
+            loadFittingTree();
+            if (FittingState.selectedFittingId === parseInt(id)) {
+                FittingState.selectedFittingId = null;
+                $('#skills-box').hide();
+                $('#requirements-box').hide();
+                $('#fitDetail').hide();
+                $('#fitDetailEmpty').show();
+            }
+        });
+    });
+
+    if (window.fittingManageMode) {
+        initializeRequirementSelectors();
+    }
+}
+
+function loadFittingTree() {
+    $.ajax({
+        url: '/fitting/tree',
+        type: 'GET',
+        dataType: 'json',
+        timeout: 15000,
+    }).done(function (groups) {
+        FittingState.treeGroups = groups || [];
+        renderFitTree();
+    });
+}
+
+function renderFitTree() {
+    const container = $('#fitTree');
+    container.empty();
+
+    if (!FittingState.treeGroups.length) {
+        container.append(`<div class="fit-tree-empty">${escapeHtml(fitI18n('treeEmptyHint'))}</div>`);
+        return;
+    }
+
+    for (const group of FittingState.treeGroups) {
+        const groupId = group.id;
+        const isUngrouped = !groupId;
+        const checkBtn = (!isUngrouped && group.fittings.length > 0)
+            ? `<button type="button" class="fit-tree-group-action" data-action="check-group" data-doctrine-id="${groupId}">${escapeHtml(fitI18n('treeCheckGroupBtn'))}</button>`
+            : '';
+
+        const items = group.fittings.map(function (fit) {
+            const iconUrl = `https://images.evetech.net/types/${fit.typeID}/icon?size=32`;
+            const editBtn = window.fittingManageMode
+                ? `<button class="btn btn-xs btn-warning fit-tree-item-action-edit" title="${escapeHtml(fitI18n('editFittingTooltip'))}"><i class="fas fa-edit"></i></button>
+                   <button class="btn btn-xs btn-danger fit-tree-item-action-delete" title="${escapeHtml(fitI18n('deleteFittingTooltip'))}"><i class="fa fa-trash"></i></button>`
+                : '';
+            return `<div class="fit-tree-item" data-id="${fit.id}" data-name="${escapeHtml(fit.name)}" data-ship="${escapeHtml(fit.shipType)}">
+                <img class="fit-tree-item-icon" src="${iconUrl}" alt="">
+                <span class="fit-tree-item-name">${escapeHtml(fit.name)} <span class="fit-tree-item-ship">· ${escapeHtml(fit.shipType)}</span></span>
+                <span class="fit-tree-item-actions">${editBtn}</span>
+            </div>`;
+        }).join('');
+
+        container.append(`<div class="fit-tree-group" data-group-id="${groupId || ''}" data-expanded="true">
+            <div class="fit-tree-group-header">
+                <span class="fit-tree-group-chevron">▶</span>
+                <span class="fit-tree-group-title">${escapeHtml(group.name)}</span>
+                <span class="fit-tree-group-count">(${group.fittings.length})</span>
+                ${checkBtn}
+            </div>
+            <div class="fit-tree-group-body">${items}</div>
+        </div>`);
+    }
+}
+
+function filterFitTree(query) {
+    const q = (query || '').toLowerCase().trim();
+    $('.fit-tree-group').each(function () {
+        const groupEl = $(this);
+        let visible = 0;
+        groupEl.find('.fit-tree-item').each(function () {
+            const item = $(this);
+            const text = (item.data('name') + ' ' + item.data('ship')).toLowerCase();
+            const match = !q || text.indexOf(q) !== -1;
+            item.toggle(match);
+            if (match) visible++;
+        });
+        groupEl.toggle(visible > 0 || !q);
+        if (q && visible > 0) groupEl.attr('data-expanded', 'true');
+    });
+}
+
+function selectFitting(fittingId, fittingName, shipName) {
+    if (!fittingId) return;
+    FittingState.selectedFittingId = fittingId;
+    FittingState.selectedFittingName = fittingName || '';
+    FittingState.selectedShipName = shipName || '';
+
+    $('.fit-tree-item').removeClass('is-selected');
+    $(`.fit-tree-item[data-id="${fittingId}"]`).addClass('is-selected');
+
+    $('#fittingId').val(fittingId);
+    $('#requirementsFittingId').val(fittingId);
+
+    loadFittingDetails(fittingId);
+    loadSkillCheckForFitting(fittingId);
+
+    if (window.fittingManageMode) {
+        loadRequirementEditor(fittingId);
+    }
+}
+
+/* ============================================================
+ *  Fit details (left bottom)
+ * ============================================================ */
+function loadFittingDetails(fittingId) {
+    $.ajax({
+        url: '/fitting/getfittingbyid/' + fittingId,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+    }).done(renderFitDetails);
+}
+
+function renderFitDetails(result) {
+    if (!result) return;
+    $('#fitDetailEmpty').hide();
+    $('#fitDetail').show().removeClass('fit-fade-in').addClass('fit-fade-in');
+    $('#fitDetailTitle').text(`${result.shipname || ''} · ${result.fitname || ''}`);
+    $('#showeft').val(result.eft || '');
+
+    const exportLinks = $('#exportLinks');
+    exportLinks.empty();
+    for (const link of result.exportLinks || []) {
+        exportLinks.append(`<a href="${link.url}" class="list-group-item list-group-item-action">${escapeHtml(link.name)}</a>`);
+    }
+    if (window.fittingManageMode) {
+        $('#eftexport').show();
+        exportLinks.show();
+    } else {
+        $('#eftexport').hide();
+        exportLinks.hide();
+    }
+
+    /* Clear all slots first */
+    const slotIds = ['highSlots', 'midSlots', 'lowSlots', 'rigs', 'subSlots', 'drones', 'cargo'];
+    for (const sid of slotIds) {
+        $(`#${sid}Items`).empty();
+        const slotEl = $(`.fit-detail-slot[data-slot="${sid}"]`);
+        slotEl.attr('data-expanded', 'false');
+        slotEl.find('.fit-detail-slot-count').text('');
+    }
+
+    const counts = Object.fromEntries(slotIds.map(s => [s, 0]));
+
+    for (const slotType in result) {
+        const slot = result[slotType];
+        let slotId = null;
+        if (slotType.startsWith('HiSlot')) slotId = 'highSlots';
+        else if (slotType.startsWith('MedSlot')) slotId = 'midSlots';
+        else if (slotType.startsWith('LoSlot')) slotId = 'lowSlots';
+        else if (slotType.startsWith('RigSlot')) slotId = 'rigs';
+        else if (slotType.startsWith('SubSlot')) slotId = 'subSlots';
+        else if (slotType === 'dronebay') slotId = 'drones';
+        else if (slotType === 'cargo') slotId = 'cargo';
+        if (!slotId) continue;
+
+        const iconBase = 'https://images.evetech.net/types';
+
+        if (slotId === 'drones' || slotId === 'cargo') {
+            for (const itemId in slot) {
+                const item = slot[itemId];
+                $(`#${slotId}Items`).append(`<div class="fit-detail-item">
+                    <img src="${iconBase}/${itemId}/icon?size=32" alt="">
+                    <span>${escapeHtml(item.name)}</span>
+                    <span class="fit-detail-item-qty">x${item.qty}</span>
+                </div>`);
+                counts[slotId] += item.qty || 1;
+            }
         } else {
-            $('#eftexport').hide();
-            exportLinks.hide();
+            $(`#${slotId}Items`).append(`<div class="fit-detail-item">
+                <img src="${iconBase}/${slot.id}/icon?size=32" alt="">
+                <span>${escapeHtml(slot.name)}</span>
+            </div>`);
+            counts[slotId]++;
         }
+    }
 
-        const eveTechUrl = 'https://images.evetech.net/types';
-        $('#fitting-window .collapse').removeClass('show');
-
-        for (const slotType in result) {
-            const slot = result[slotType];
-            const iconUrl = `${eveTechUrl}/${slot.id}/icon?size=32`;
-            const row = `<tr><td><img src="${iconUrl}" height='24' />${escapeHtml(slot.name)}</td></tr>`;
-
-            let slotId = null;
-
-            if (slotType.startsWith('HiSlot')) {
-                slotId = 'highSlots';
-            } else if (slotType.startsWith('MedSlot')) {
-                slotId = 'midSlots';
-            } else if (slotType.startsWith('LoSlot')) {
-                slotId = 'lowSlots';
-            } else if (slotType.startsWith('RigSlot')) {
-                slotId = 'rigs';
-            } else if (slotType.startsWith('SubSlot')) {
-                slotId = 'subSlots';
-            } else if (slotType.startsWith('dronebay')) {
-                slotId = 'drones';
-            } else if (slotType.startsWith('cargo')) {
-                slotId = 'cargo';
-            }
-
-            if (slotId && slotId !== 'drones' && slotId !== 'cargo') {
-                $('#' + slotId).find('tbody').append(row);
-                $('#' + slotId + 'Collapse').addClass('show');
-            } else if (slotId === 'drones' || slotId === 'cargo') {
-                for (const itemId in result[slotType]) {
-                    const item = result[slotType][itemId];
-                    const itemRow = `<tr><td><img src="${eveTechUrl}/${itemId}/icon?size=32" height="24" />${escapeHtml(item.name)}</td><td>${item.qty}</td></tr>`;
-                    $('#' + slotId).find('tbody').append(itemRow);
-                    $('#' + slotId + 'Collapse').addClass('show');
-                }
-            }
+    for (const sid of slotIds) {
+        const slotEl = $(`.fit-detail-slot[data-slot="${sid}"]`);
+        if (counts[sid] > 0) {
+            slotEl.attr('data-expanded', 'true');
+            slotEl.find('.fit-detail-slot-count').text(`(${counts[sid]})`);
+            slotEl.show();
+        } else {
+            slotEl.hide();
         }
     }
 }
 
-function fillSkills(result) {
-    const characterId = $('#characterSpinner').find(":selected").val();
+/* ============================================================
+ *  Skill check (right column)
+ * ============================================================ */
+function loadSkillCheckForFitting(fittingId) {
+    $.ajax({
+        url: '/fitting/getskillsbyfitid/' + fittingId,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 15000,
+    }).done(function (result) {
+        FittingState.skillsPayload = result;
+        renderSkillCheck(result);
+    });
+}
 
-    if (!characterId || !result.characters) {
-        return;
+function runGroupCheck(doctrineId) {
+    $.ajax({
+        url: '/fitting/getskillsbydoctrineid/' + doctrineId,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 20000,
+    }).done(function (result) {
+        FittingState.skillsPayload = result;
+        FittingState.selectedFittingId = null;
+        $('.fit-tree-item').removeClass('is-selected');
+        $('#fitDetail').hide();
+        $('#fitDetailEmpty').show();
+        renderSkillCheck(result);
+    });
+}
+
+function renderSkillCheck(result) {
+    if (!result) return;
+    $('#skills-box').show();
+    const spinner = $('#characterSpinner');
+    if (!spinner.find('option').length) {
+        spinner.empty();
+        for (const cid in result.characters) {
+            spinner.append(`<option value="${result.characters[cid].id}">${escapeHtml(result.characters[cid].name)}</option>`);
+        }
     }
-
-    const character = result.characters[characterId];
-
-    if (!character) {
-        return;
-    }
-
     if (result.fittings) {
-        fillDoctrineSkills(result, character);
-        return;
+        renderGroupSkillCheck(result);
+    } else {
+        renderSingleSkillCheck(result);
     }
+}
 
-    $('#singleSkillResults').show();
+function renderSingleSkillCheck(result) {
+    $('#singleSkillView').show();
     $('#groupSkillResults').hide().empty();
 
+    const characterId = $('#characterSpinner').val();
+    const character = (result.characters || {})[characterId];
     const requirements = result.requirements || {minimum: result.skills || [], advanced: []};
+    const minimumSkills = requirements.minimum || [];
+    const advancedSkills = requirements.advanced || [];
 
-    drawSkillRequirementPanel(requirements.minimum || [], character, $('#minimumSkillPanel'));
-    drawSkillRequirementPanel(requirements.advanced || [], character, $('#advancedSkillPanel'));
+    const minMet = character ? skillsAllMet(minimumSkills, character) : false;
+    const advMet = advancedSkills.length ? (character ? skillsAllMet(advancedSkills, character) : false) : null;
+
+    const status = computeFittingStatus({minimum: minMet, advanced: advMet});
+    $('#skillCheckOverallStatus').html(statusPillHtml(status, {large: true}));
+
+    /* Inline tier badges next to tab labels */
+    renderTabBadge('minimum', minMet ? 'passed' : 'failed');
+    if (advancedSkills.length === 0) {
+        renderTabBadge('advanced', 'not-set');
+    } else {
+        renderTabBadge('advanced', advMet ? 'passed' : 'failed');
+    }
+
+    renderActiveSkillTab();
 }
 
-function fillDoctrineSkills(result, character) {
-    const groupSkillResults = $('#groupSkillResults');
+function renderActiveSkillTab() {
+    const result = FittingState.skillsPayload;
+    if (!result || result.fittings) return;
+    const characterId = $('#characterSpinner').val();
+    const character = (result.characters || {})[characterId];
+    if (!character) {
+        $('#skillTabContent').html(`<div class="text-muted">${escapeHtml(fitI18n('noCharacterSelected'))}</div>`);
+        return;
+    }
+    const requirements = result.requirements || {minimum: result.skills || [], advanced: []};
+    const tier = FittingState.activeTier;
+    const list = (tier === 'advanced' ? requirements.advanced : requirements.minimum) || [];
+    if (!list.length) {
+        const empty = tier === 'advanced' ? fitI18n('noAdvancedRequirements') : '—';
+        $('#skillTabContent').html(`<div class="text-muted">${escapeHtml(empty)}</div>`);
+        return;
+    }
+    $('#skillTabContent').html(renderSkillRequirementPanel(list, character));
+}
 
-    $('#singleSkillResults').hide();
-    groupSkillResults.show().empty();
+function renderTabBadge(tier, state) {
+    const badge = $('#tabBadge' + tier.charAt(0).toUpperCase() + tier.slice(1));
+    badge.removeClass('is-failed is-entry is-advanced is-not-set').show();
+    const i18n = window.fittingI18n || {};
+    if (state === 'passed') {
+        badge.addClass('is-advanced').text('✓');
+    } else if (state === 'failed') {
+        badge.addClass('is-failed').text('✕');
+    } else {
+        badge.addClass('is-not-set').text(i18n.statusAdvancedNotSet || '—');
+    }
+}
 
-    for (const fitting of result.fittings) {
-        const minimumPanelId = 'groupMinimumSkillPanel' + fitting.id;
-        const advancedPanelId = 'groupAdvancedSkillPanel' + fitting.id;
+function renderGroupSkillCheck(result) {
+    $('#singleSkillView').hide();
+    const target = $('#groupSkillResults').show().empty();
+    const characterId = $('#characterSpinner').val();
+    const character = (result.characters || {})[characterId];
+
+    if (!character) {
+        target.html(`<div class="text-muted">${escapeHtml(fitI18n('noCharacterSelected'))}</div>`);
+        $('#skillCheckOverallStatus').empty();
+        return;
+    }
+
+    let allEntry = true;
+    let anyAdvanced = false;
+    let anyConfigured = false;
+
+    for (const fitting of result.fittings || []) {
         const requirements = fitting.requirements || {minimum: [], advanced: []};
-        const fittingTitle = escapeHtml(fitting.shipType + ', ' + fitting.name);
+        const minimumSkills = requirements.minimum || [];
+        const advancedSkills = requirements.advanced || [];
+        const minMet = skillsAllMet(minimumSkills, character);
+        const advMet = advancedSkills.length ? skillsAllMet(advancedSkills, character) : null;
+        if (!minMet) allEntry = false;
+        if (advMet === true) anyAdvanced = true;
+        if (advancedSkills.length) anyConfigured = true;
 
-        groupSkillResults.append(`<div class="card card-outline card-secondary mb-3">
-            <div class="card-header"><h5 class="card-title mb-0">${fittingTitle}</h5></div>
+        const status = computeFittingStatus({minimum: minMet, advanced: advMet});
+        const headerTitle = `${escapeHtml(fitting.shipType || '')} · ${escapeHtml(fitting.name || '')}`;
+
+        const tierKey = (advancedSkills.length && advMet === false) ? 'advanced'
+            : (minMet ? (advancedSkills.length ? 'advanced' : 'minimum') : 'minimum');
+        const visibleList = tierKey === 'advanced' ? advancedSkills : minimumSkills;
+
+        target.append(`<div class="card fit-card-flat mb-3 fit-fade-in">
+            <div class="card-header skill-check-header">
+                <h6 class="mb-0">${headerTitle}</h6>
+                ${statusPillHtml(status, {large: false})}
+            </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <h6>${escapeHtml(window.fittingMinimumLabel || 'Minimum Requirements')}</h6>
-                        <div id="${minimumPanelId}"></div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <h6>${escapeHtml(window.fittingAdvancedLabel || 'Advanced Requirements')}</h6>
-                        <div id="${advancedPanelId}"></div>
-                    </div>
+                <div class="skill-check-tabs">
+                    <button type="button" class="skill-check-tab group-tier-tab ${tierKey === 'minimum' ? 'is-active' : ''}" data-tier="minimum" data-fitting-id="${fitting.id}">${escapeHtml(fitI18n('tabEntry'))}</button>
+                    <button type="button" class="skill-check-tab group-tier-tab ${tierKey === 'advanced' ? 'is-active' : ''}" data-tier="advanced" data-fitting-id="${fitting.id}">${escapeHtml(fitI18n('tabAdvanced'))}</button>
                 </div>
+                <div class="mt-3 group-tier-content" data-fitting-id="${fitting.id}">${renderSkillRequirementPanel(visibleList, character) || `<div class="text-muted">${escapeHtml(fitI18n('noAdvancedRequirements'))}</div>`}</div>
             </div>
         </div>`);
-
-        drawSkillRequirementPanel(requirements.minimum || [], character, $('#' + minimumPanelId));
-        drawSkillRequirementPanel(requirements.advanced || [], character, $('#' + advancedPanelId));
     }
+
+    /* Group-level tab switching */
+    target.off('click', '.group-tier-tab').on('click', '.group-tier-tab', function () {
+        const fid = $(this).data('fittingId');
+        const tier = $(this).data('tier');
+        target.find(`.group-tier-tab[data-fitting-id="${fid}"]`).removeClass('is-active');
+        $(this).addClass('is-active');
+        const fitting = (result.fittings || []).find(f => f.id === fid);
+        if (!fitting) return;
+        const list = (tier === 'advanced' ? fitting.requirements.advanced : fitting.requirements.minimum) || [];
+        const html = list.length
+            ? renderSkillRequirementPanel(list, character)
+            : `<div class="text-muted">${escapeHtml(fitI18n('noAdvancedRequirements'))}</div>`;
+        target.find(`.group-tier-content[data-fitting-id="${fid}"]`).html(html);
+    });
+
+    const overall = !allEntry ? 'failed' : (anyConfigured && anyAdvanced ? 'advanced' : 'entry');
+    $('#skillCheckOverallStatus').html(statusPillHtml(overall, {large: true}));
+}
+
+/* ============================================================
+ *  Skill requirement panel (categories + bars)
+ * ============================================================ */
+function skillsAllMet(skills, character) {
+    if (!skills || !skills.length || !character) return true;
+    for (const skill of skills) {
+        const cs = character.skill[skill.typeId] || {level: 0};
+        if (parseInt(cs.level || 0) < parseInt(skill.level || 0)) return false;
+    }
+    return true;
+}
+
+function renderSkillRequirementPanel(skills, character) {
+    if (!skills || !skills.length) return '';
+    const groups = groupSkillsByCategory(skills);
+    return groups.map(group => renderSkillGroup(group, character)).join('');
 }
 
 function groupSkillsByCategory(skills) {
     const groups = {};
-
     for (const skill of skills) {
-        const groupId = skill.groupId || 'other';
-        const groupName = skill.groupName || 'Other';
-
-        if (!groups[groupId]) {
-            groups[groupId] = {
-                id: groupId,
-                name: groupName,
-                skills: [],
-                missing: false
-            };
-        }
-
-        groups[groupId].skills.push(skill);
+        const gid = skill.groupId || 'other';
+        if (!groups[gid]) groups[gid] = {id: gid, name: skill.groupName || 'Other', skills: []};
+        groups[gid].skills.push(skill);
     }
-
-    return Object.values(groups).sort(function (left, right) {
-        return left.name.localeCompare(right.name);
-    });
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function drawSkillRequirementPanel(skills, character, container) {
-    container.empty();
-
-    if (!skills.length) {
-        container.append('<div class="text-muted">—</div>');
-        return;
+function renderSkillGroup(group, character) {
+    const rows = [];
+    let hasMissing = false;
+    group.skills.sort((a, b) => a.typeName.localeCompare(b.typeName));
+    for (const skill of group.skills) {
+        const cs = character.skill[skill.typeId] || {level: 0, rank: 1};
+        const currentLevel = parseInt(cs.level || 0);
+        const requiredLevel = parseInt(skill.level || 0);
+        const rank = parseInt(cs.rank || 1);
+        const missing = currentLevel < requiredLevel;
+        if (missing) hasMissing = true;
+        rows.push(renderSkillRow(skill, currentLevel, requiredLevel, rank, missing));
     }
-
-    const groups = groupSkillsByCategory(skills);
-
-    for (const group of groups) {
-        const groupDomId = 'skillGroup' + group.id + Math.random().toString(36).slice(2);
-        const rows = [];
-        let hasMissing = false;
-
-        group.skills.sort(function (left, right) {
-            return left.typeName.localeCompare(right.typeName);
-        });
-
-        for (const skill of group.skills) {
-            const characterSkill = character.skill[skill.typeId] || {level: 0, rank: 1};
-            const currentLevel = parseInt(characterSkill.level || 0);
-            const requiredLevel = parseInt(skill.level || 0);
-            const rank = parseInt(characterSkill.rank || 1);
-            const missing = currentLevel < requiredLevel;
-
-            hasMissing = hasMissing || missing;
-            rows.push(drawSkillRequirementRow(skill, currentLevel, requiredLevel, rank, missing));
-        }
-
-        const showClass = hasMissing ? 'show' : '';
-        const statusClass = hasMissing ? 'text-danger' : 'text-success';
-
-        container.append(`<div class="card mb-2">
-            <div class="card-header p-2">
-                <button class="btn btn-link btn-block text-left p-0 ${statusClass}" type="button" data-toggle="collapse" data-target="#${groupDomId}" aria-expanded="${hasMissing ? 'true' : 'false'}">
-                    ${escapeHtml(group.name)}
-                </button>
-            </div>
-            <div id="${groupDomId}" class="collapse ${showClass}">
-                <div class="card-body p-2">
-                    ${rows.join('')}
-                </div>
-            </div>
-        </div>`);
-    }
-}
-
-function drawSkillRequirementRow(skill, currentLevel, requiredLevel, rank, missing) {
-    let trainingTime = '';
-
-    if (missing && requiredLevel > 0) {
-        const requiredPoints = rank * 250 * Math.pow(5.66, requiredLevel - 1);
-        const currentPoints = currentLevel > 0 ? rank * 250 * Math.pow(5.66, currentLevel - 1) : 0;
-        trainingTime = formatTime(requiredPoints - currentPoints) || '';
-    }
-
-    return `<div class="mb-2 p-2 ${missing ? 'bg-red' : ''}">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>${escapeHtml(skill.typeName)} <small>(x${rank})</small></div>
-            <div><small>${currentLevel}/${requiredLevel} ${escapeHtml(trainingTime)}</small></div>
+    const stateClass = hasMissing ? 'is-missing' : 'is-passing';
+    const expanded = hasMissing ? 'true' : 'false';
+    return `<div class="skill-group ${stateClass}" data-expanded="${expanded}">
+        <div class="skill-group-header">
+            <span class="skill-group-chevron">▶</span>
+            <span class="skill-group-title">${escapeHtml(group.name)}</span>
+            <span class="text-muted small">${group.skills.length}</span>
         </div>
-        ${drawSegmentedSkillBar(currentLevel, requiredLevel)}
+        <div class="skill-group-body">${rows.join('')}</div>
     </div>`;
 }
 
-function drawSegmentedSkillBar(currentLevel, requiredLevel) {
-    const segments = [];
-    const passed = currentLevel >= requiredLevel;
-
-    for (let level = 1; level <= 5; level++) {
-        const filled = currentLevel >= level;
-        const required = requiredLevel === level;
-        let colorClass = 'bg-light';
-
-        if (filled && passed) {
-            colorClass = 'bg-success';
-        } else if (filled) {
-            colorClass = 'bg-success';
-        } else if (level <= requiredLevel) {
-            colorClass = 'bg-danger';
-        }
-
-        segments.push(`<div class="${colorClass}" style="flex:1; height:12px; border:1px solid #6c757d; ${required ? 'box-shadow: inset -3px 0 0 #000;' : ''}"></div>`);
+function renderSkillRow(skill, currentLevel, requiredLevel, rank, missing) {
+    let trainingTime = '';
+    if (missing && requiredLevel > 0) {
+        const need = rank * 250 * Math.pow(5.66, requiredLevel - 1);
+        const have = currentLevel > 0 ? rank * 250 * Math.pow(5.66, currentLevel - 1) : 0;
+        trainingTime = formatTime(need - have) || '';
     }
-
-    return `<div class="d-flex mt-1" style="gap:2px">${segments.join('')}</div>`;
+    return `<div class="skill-row ${missing ? 'is-missing' : ''}">
+        <div class="skill-row-head">
+            <span class="skill-row-name">${escapeHtml(skill.typeName)} <small>(x${rank})</small></span>
+            <span class="skill-row-meta">${currentLevel} / ${requiredLevel}${trainingTime ? ' · ' + escapeHtml(trainingTime) : ''}</span>
+        </div>
+        ${renderSkillBar(currentLevel, requiredLevel)}
+    </div>`;
 }
 
-function fillRequirementEditor(result) {
+function renderSkillBar(currentLevel, requiredLevel) {
+    const segments = [];
+    const passed = currentLevel >= requiredLevel;
+    for (let lvl = 1; lvl <= 5; lvl++) {
+        const filled = lvl <= currentLevel;
+        const isMissingTarget = !passed && lvl > currentLevel && lvl <= requiredLevel;
+        let cls = '';
+        if (filled && lvl <= requiredLevel) cls = 'is-filled';
+        else if (filled) cls = 'is-overflow';
+        else if (isMissingTarget) cls = 'is-missing';
+        segments.push(`<div class="skill-bar-segment ${cls}"></div>`);
+    }
+    /* Marker position: center of required segment.
+       Each segment occupies (100 / 5)% horizontally; gaps are small so we
+       approximate the center as ((req - 0.5) / 5) * 100% */
+    const markerLeft = requiredLevel > 0 ? ((requiredLevel - 0.5) / 5) * 100 : 0;
+    const marker = requiredLevel > 0
+        ? `<div class="skill-bar-marker" style="left: ${markerLeft.toFixed(2)}%"></div>`
+        : '';
+    return `<div class="skill-bar">${marker}${segments.join('')}</div>`;
+}
+
+function formatTime(points) {
+    if (!points || points <= 0) return '';
+    const totalHours = points / 1800;
+    const days = Math.floor(totalHours / 24);
+    const remHours = Math.floor(totalHours - days * 24);
+    const remMins = Math.floor((totalHours - days * 24 - remHours) * 60);
+    return `${days}d ${remHours}h ${remMins}m`;
+}
+
+/* ============================================================
+ *  Requirement editor (manage mode)
+ * ============================================================ */
+function loadRequirementEditor(fittingId) {
+    $.ajax({
+        url: '/fitting/' + fittingId + '/requirements',
+        type: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+    }).done(function (data) {
+        $('#requirements-box').show();
+        renderRequirementsEditor(data);
+    });
+}
+
+function renderRequirementsEditor(data) {
     $('#minimumRequirementsBody').empty();
     $('#advancedRequirementsBody').empty();
-
-    for (const skill of result.minimum || []) {
+    for (const skill of data.minimum || []) {
         $('#minimumRequirementsBody').append(drawRequirementEditorRow(skill, skill.source || 'manual'));
     }
-
-    for (const skill of result.advanced || []) {
+    for (const skill of data.advanced || []) {
         $('#advancedRequirementsBody').append(drawRequirementEditorRow(skill, skill.source || 'manual'));
     }
 }
@@ -254,27 +667,23 @@ function drawRequirementEditorRow(skill, source) {
         const selected = parseInt(skill.level) === level ? 'selected' : '';
         return `<option value="${level}" ${selected}>${level}</option>`;
     }).join('');
-
     return `<tr data-skill-type-id="${skill.typeId}" data-source="${source}">
-        <td>${escapeHtml(skill.typeName)} <small>(${skill.typeId})</small></td>
+        <td>${escapeHtml(skill.typeName)} <small class="text-muted">(${skill.typeId})</small></td>
         <td><select class="form-control form-control-sm requirementLevel">${levelOptions}</select></td>
-        <td><button type="button" class="btn btn-xs btn-danger removeRequirement"><span class="fa fa-trash"></span></button></td>
+        <td><button type="button" class="btn btn-xs btn-outline-danger removeRequirement"><i class="fa fa-trash"></i></button></td>
     </tr>`;
 }
 
 function initializeRequirementSelectors() {
-    if (!$('#requirements-box').length) {
-        return;
-    }
+    if (!$('#requirements-box').length) return;
 
     $.getJSON('/fitting/skill-groups').done(function (groups) {
         $('.skillGroupSelect').each(function () {
-            const groupSelect = $(this);
-            groupSelect.empty();
-            groupSelect.append('<option value=""></option>');
-
-            for (const group of groups) {
-                groupSelect.append(`<option value="${group.id}">${escapeHtml(group.text)}</option>`);
+            const sel = $(this);
+            sel.empty();
+            sel.append('<option value=""></option>');
+            for (const g of groups) {
+                sel.append(`<option value="${g.id}">${escapeHtml(g.text)}</option>`);
             }
         });
     });
@@ -282,93 +691,63 @@ function initializeRequirementSelectors() {
     $('.requirementSkillSelect').each(function () {
         const skillSelect = $(this);
         const tier = skillSelect.data('tier');
-
         if ($.fn.select2) {
             skillSelect.select2({
                 width: '100%',
-                placeholder: window.fittingSkillPlaceholder || '',
+                placeholder: fitI18n('skillPlaceholder'),
                 ajax: {
                     url: '/fitting/skills/search',
                     dataType: 'json',
                     delay: 250,
-                    data: function (params) {
-                        return {
-                            q: params.term || '',
-                            group_id: $('#' + tier + 'SkillGroup').val() || ''
-                        };
-                    },
-                    processResults: function (data) {
-                        return data;
-                    }
-                }
+                    data: params => ({
+                        q: params.term || '',
+                        group_id: $('#' + tier + 'SkillGroup').val() || '',
+                    }),
+                    processResults: data => data,
+                },
             });
         }
     });
 }
 
 function resetRequirementSkillSelect(tier) {
-    const skillSelect = $('#' + tier + 'SkillSelect');
-
-    if ($.fn.select2 && skillSelect.data('select2')) {
-        skillSelect.val(null).trigger('change');
+    const sel = $('#' + tier + 'SkillSelect');
+    if ($.fn.select2 && sel.data('select2')) {
+        sel.val(null).trigger('change');
         return;
     }
-
-    skillSelect.empty();
-
+    sel.empty();
     $.getJSON('/fitting/skills/search', {
-        group_id: $('#' + tier + 'SkillGroup').val() || ''
+        group_id: $('#' + tier + 'SkillGroup').val() || '',
     }).done(function (data) {
-        for (const skill of data.results || []) {
-            skillSelect.append(`<option value="${skill.id}">${escapeHtml(skill.text)}</option>`);
+        for (const s of data.results || []) {
+            sel.append(`<option value="${s.id}">${escapeHtml(s.text)}</option>`);
         }
     });
 }
 
 function selectedRequirementSkill(tier) {
-    const skillSelect = $('#' + tier + 'SkillSelect');
-
-    if ($.fn.select2 && skillSelect.data('select2')) {
-        const selected = skillSelect.select2('data')[0];
-
-        if (!selected) {
-            return null;
-        }
-
-        return {
-            typeId: parseInt(selected.id),
-            typeName: selected.text
-        };
+    const sel = $('#' + tier + 'SkillSelect');
+    if ($.fn.select2 && sel.data('select2')) {
+        const selected = sel.select2('data')[0];
+        if (!selected) return null;
+        return {typeId: parseInt(selected.id), typeName: selected.text};
     }
-
-    const option = skillSelect.find(':selected');
-
-    if (!option.length || !option.val()) {
-        return null;
-    }
-
-    return {
-        typeId: parseInt(option.val()),
-        typeName: option.text()
-    };
+    const opt = sel.find(':selected');
+    if (!opt.length || !opt.val()) return null;
+    return {typeId: parseInt(opt.val()), typeName: opt.text()};
 }
 
 function addRequirementToEditor(tier) {
     const skill = selectedRequirementSkill(tier);
     const level = parseInt($('#' + tier + 'SkillLevel').val());
     const body = $('#' + tier + 'RequirementsBody');
-
-    if (!skill || !skill.typeId || !level) {
-        return;
-    }
-
+    if (!skill || !skill.typeId || !level) return;
     const existing = body.find(`tr[data-skill-type-id="${skill.typeId}"]`);
-
     if (existing.length) {
         existing.find('.requirementLevel').val(level);
         return;
     }
-
     body.append(drawRequirementEditorRow({
         typeId: skill.typeId,
         typeName: skill.typeName,
@@ -377,75 +756,32 @@ function addRequirementToEditor(tier) {
 }
 
 function collectRequirements(body, defaultSource) {
-    const requirements = [];
-
+    const out = [];
     body.find('tr[data-skill-type-id]').each(function () {
-        requirements.push({
+        out.push({
             skill_type_id: parseInt($(this).data('skill-type-id')),
             level: parseInt($(this).find('.requirementLevel').val()),
-            source: defaultSource || $(this).data('source') || 'manual'
+            source: defaultSource || $(this).data('source') || 'manual',
         });
     });
-
-    return requirements;
+    return out;
 }
 
-function formatTime(points) {
-    if (!points) {
-        return;
-    }
-
-    let totalHours = points / 1800;
-    let days = Math.floor(totalHours / 24);
-    let remainingHours = Math.floor(totalHours - (days * 24));
-    let remainingMinutes = Math.floor((totalHours - (days * 24) - remainingHours) * 60);
-
-    return `${days}d ${remainingHours}h ${remainingMinutes}m`;
-}
-
-function drawLevelBox(neededLevel, currentLevel, skillName, rank) {
-    let trainingtime = '';
-    let row = '';
-    let pointdiff = 0;
-
-    if (currentLevel === 0) {
-        row = '<tr class="bg-red">';
-        trainingtime = formatTime(rank * 250 * Math.pow(5.66, (neededLevel - 1)));
-    } else if ((neededLevel - currentLevel) > 0) {
-        row = '<tr class="bg-orange">';
-        pointdiff = (rank * 250 * Math.pow(5.66, (neededLevel - 1))) - (rank * 250 * Math.pow(5.66, (currentLevel - 1)));
-        trainingtime = formatTime(pointdiff);
-    } else {
-        row = '<tr>';
-    }
-
-    let graph = '<td>' + escapeHtml(skillName) + ' <small>(x' + rank + ')</small></td>';
-    graph += '<td style="width: 11em"><div style="background-color: transparent; width: 5.5em; text-align: center; height: 1.35em; letter-spacing: 2.25px;" class="pull-right">';
-
-    if (currentLevel >= neededLevel) {
-        for (let i = 0; i < neededLevel; i++) {
-            graph = graph + '<span class="fa fa-square " style="vertical-align: text-top; color: #5ac597;"></span>';
-        }
-        for (let i = neededLevel; i < currentLevel; i++) {
-            graph = graph + '<span class="fa fa-square text-green" style="vertical-align: text-top"></span>';
-        }
-        for (let i = 0; i < (5 - currentLevel); i++) {
-            graph = graph + '<span class="fa fa-circle text-green" style="vertical-align: text-top"></span>';
-        }
-    } else {
-        for (let i = 0; i < currentLevel; i++) {
-            graph = graph + '<span class="fa fa-square " style="vertical-align: text-top; color: #5ac597;"></span>';
-        }
-        for (let i = 0; i < (neededLevel - currentLevel); i++) {
-            graph = graph + '<span class="fa fa-circle text-danger" style="vertical-align: text-top"></span>';
-        }
-        for (let i = 0; i < (5 - neededLevel); i++) {
-            graph = graph + '<span class="fa fa-circle text-green" style="vertical-align: text-top"></span>';
-        }
-    }
-
-    graph += '</div><span class="pull-right"><small>' + (trainingtime || '') + '</small> </span></td></tr>';
-    graph += '</td>';
-
-    return row + graph + '</tr>';
+function saveRequirements() {
+    const fittingId = $('#requirementsFittingId').val();
+    if (!fittingId) return;
+    $.ajax({
+        url: '/fitting/' + fittingId + '/requirements',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            minimum: collectRequirements($('#minimumRequirementsBody'), 'manual'),
+            advanced: collectRequirements($('#advancedRequirementsBody')),
+        },
+        timeout: 10000,
+    }).done(function (data) {
+        renderRequirementsEditor(data);
+        loadSkillCheckForFitting(fittingId);
+    });
 }

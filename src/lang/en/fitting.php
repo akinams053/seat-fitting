@@ -13,6 +13,7 @@ return [
     'run_group_check_btn' => 'Check This Group',
 
     'add_new_fitting_tooltip' => 'Add a new fitting',
+    'add_new_fitting_btn' => 'New Fitting',
 
     'col_ship_type' => 'Ship',
     'col_fit_name' => 'Fit Name',
@@ -20,6 +21,10 @@ return [
 
     'search_ship_placeholder' => 'Search by ship type...',
     'search_fit_placeholder' => 'Search by fit name...',
+    'tree_search_placeholder' => 'Search fitting or ship...',
+    'tree_ungrouped_label' => 'Ungrouped Fittings',
+    'tree_check_group_btn' => 'Check Group',
+    'tree_empty_hint' => 'No fittings yet',
     'datatable_search' => 'Search all:',
     'datatable_length' => 'Show _MENU_ fittings',
     'datatable_info' => 'Showing _START_ to _END_ of _TOTAL_ fittings',
@@ -50,10 +55,18 @@ return [
     'fit_drone_bay_title' => 'Drone Bay',
     'fit_cargo_title' => 'Cargo',
     'fit_drone_bay_number' => 'Number',
+    'fit_details_title' => 'Fitting Details',
+    'fit_select_hint' => 'Select a fitting on the left to see details',
 
     'required_skills_title' => 'Skill Check',
-    'minimum_requirements_title' => 'Minimum Requirements',
+    'minimum_requirements_title' => 'Baseline Requirements',
     'advanced_requirements_title' => 'Advanced Requirements',
+    'tab_entry_label' => 'Baseline',
+    'tab_advanced_label' => 'Advanced',
+    'status_failed' => 'Not Met',
+    'status_entry_passed' => 'Baseline Met',
+    'status_advanced_passed' => 'Advanced Met',
+    'status_advanced_not_set' => 'Advanced Not Set',
     'custom_requirements_title' => 'Custom Skills',
     'manage_requirements_title' => 'Manage Skill Requirements',
     'skills_required_level_header' => 'Required Level',

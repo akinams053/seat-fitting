@@ -13,6 +13,7 @@ return [
     'run_group_check_btn' => '检查该方案组',
 
     'add_new_fitting_tooltip' => '新增配装',
+    'add_new_fitting_btn' => '录入新配装',
 
     'col_ship_type' => '舰船',
     'col_fit_name' => '配装名称',
@@ -20,6 +21,10 @@ return [
 
     'search_ship_placeholder' => '按舰船类型搜索…',
     'search_fit_placeholder' => '按配装名称搜索…',
+    'tree_search_placeholder' => '搜索配装或舰船…',
+    'tree_ungrouped_label' => '未分组配装',
+    'tree_check_group_btn' => '检查该分组',
+    'tree_empty_hint' => '暂无配装',
     'datatable_search' => '全局搜索：',
     'datatable_length' => '显示 _MENU_ 套配装',
     'datatable_info' => '显示第 _START_ 到 _END_ 条，共 _TOTAL_ 条配装',
@@ -50,10 +55,18 @@ return [
     'fit_drone_bay_title' => '无人机舱',
     'fit_cargo_title' => '货柜',
     'fit_drone_bay_number' => '数量',
+    'fit_details_title' => '配装详情',
+    'fit_select_hint' => '在左侧选择一套配装以查看详情',
 
     'required_skills_title' => '技能检查',
-    'minimum_requirements_title' => '最低要求',
+    'minimum_requirements_title' => '入门要求',
     'advanced_requirements_title' => '进阶要求',
+    'tab_entry_label' => '入门',
+    'tab_advanced_label' => '进阶',
+    'status_failed' => '未达标',
+    'status_entry_passed' => '入门完成',
+    'status_advanced_passed' => '进阶完成',
+    'status_advanced_not_set' => '进阶未配置',
     'custom_requirements_title' => '自定义技能',
     'manage_requirements_title' => '管理技能要求',
     'skills_required_level_header' => '所需等级',

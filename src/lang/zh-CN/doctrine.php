@@ -19,16 +19,41 @@ return [
     'delete_doctrine_modal_title' => '确认删除？',
     'delete_doctrine_modal_body' => '确定要删除这个配装分组吗？',
 
+    'workspace_groups_title' => '配装分组',
+    'workspace_pool_title' => '所有配装',
+    'workspace_new_group_btn' => '新建分组',
+    'workspace_new_group_placeholder' => '输入新分组名称…',
+    'workspace_pool_search_placeholder' => '搜索配装或舰船…',
+    'workspace_group_empty_hint' => '从右侧拖入配装到此处',
+    'workspace_pool_empty_hint' => '当前没有可用配装',
+    'workspace_rename_btn' => '重命名',
+    'workspace_remove_fit_btn' => '从分组移除',
+    'workspace_hint' => '提示：把右侧配装拖入左侧分组以加入；同一配装可放入多个分组。',
+
     'report_page_title' => '军团技能检查',
 
     'report_alliance_label' => '联盟',
-    'report_alliance_note' => '<b>说明：</b>检查结果会显示每套配装的舰体、最低要求和进阶要求达标情况。',
+    'report_alliance_note' => '<b>说明：</b>当前仅检查 Fraternity.[FRT] 联盟下 YeLuo-XingHai 军团的成员。',
     'report_alliance_placeholder' => '选择联盟',
 
-    'report_corporation_label' => '公司',
-    'report_corporation_placeholder' => '选择公司',
+    'report_corporation_label' => '军团',
+    'report_corporation_placeholder' => '选择军团',
 
     'report_doctrine_label' => '配装分组',
+    'report_fitting_label' => '单个配装',
+    'report_target_label' => '检查对象',
+    'report_target_doctrine' => '配装分组',
+    'report_target_fitting' => '单个配装',
+
+    'report_fixed_alliance_label' => '联盟',
+    'report_fixed_corporation_label' => '军团',
+    'report_alliance_not_found' => 'SeAT 数据中找不到联盟 Fraternity.[FRT]，请先导入联盟信息。',
+    'report_corporation_not_found' => 'SeAT 数据中找不到军团 YeLuo-XingHai，请先导入军团信息。',
+
+    'report_filter_all' => '全部',
+    'report_filter_failed' => '未达标',
+    'report_filter_entry' => '入门',
+    'report_filter_advanced' => '进阶',
 
     'report_run_btn' => '开始检查',
 
@@ -44,7 +69,10 @@ return [
     'report_hull_header' => '舰体合计',
     'report_hull_badge' => '舰体',
     'report_fit_badge' => '完整',
-    'report_minimum_badge' => '最低',
+    'report_minimum_badge' => '入门',
     'report_advanced_badge' => '进阶',
     'report_not_configured_badge' => '进阶未配置',
+    'report_status_failed' => '未达标',
+    'report_status_entry' => '入门',
+    'report_status_advanced' => '进阶',
 ];

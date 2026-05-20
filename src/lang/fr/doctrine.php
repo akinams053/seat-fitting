@@ -19,16 +19,41 @@ return [
     'delete_doctrine_modal_title' => 'Êtes-vous sûr ?',
     'delete_doctrine_modal_body' => 'Voulez-vous vraiment supprimer ce groupe de fittings ?',
 
+    'workspace_groups_title' => 'Groupes de fittings',
+    'workspace_pool_title' => 'Tous les fittings',
+    'workspace_new_group_btn' => 'Nouveau groupe',
+    'workspace_new_group_placeholder' => 'Nom du nouveau groupe...',
+    'workspace_pool_search_placeholder' => 'Rechercher un fit ou un vaisseau...',
+    'workspace_group_empty_hint' => 'Glissez des fittings ici',
+    'workspace_pool_empty_hint' => 'Aucun fitting disponible',
+    'workspace_rename_btn' => 'Renommer',
+    'workspace_remove_fit_btn' => 'Retirer du groupe',
+    'workspace_hint' => 'Astuce : faites glisser un fitting de droite vers un groupe à gauche. Un même fitting peut appartenir à plusieurs groupes.',
+
     'report_page_title' => 'Contrôle de compétences corporation',
 
     'report_alliance_label' => 'Alliance',
-    'report_alliance_note' => '<b>Note :</b> Les résultats indiquent le statut coque, minimum et avancé pour chaque fitting.',
+    'report_alliance_note' => '<b>Note :</b> Les contrôles sont actuellement limités à YeLuo-XingHai dans Fraternity.[FRT].',
     'report_alliance_placeholder' => 'Sélectionner les alliances',
 
     'report_corporation_label' => 'Corporation',
     'report_corporation_placeholder' => 'Sélectionner les corporations',
 
     'report_doctrine_label' => 'Groupe de fittings',
+    'report_fitting_label' => 'Fitting unique',
+    'report_target_label' => 'Cible du contrôle',
+    'report_target_doctrine' => 'Groupe de fittings',
+    'report_target_fitting' => 'Fitting unique',
+
+    'report_fixed_alliance_label' => 'Alliance',
+    'report_fixed_corporation_label' => 'Corporation',
+    'report_alliance_not_found' => 'Alliance Fraternity.[FRT] introuvable dans SeAT. Importez d\'abord les informations d\'alliance.',
+    'report_corporation_not_found' => 'Corporation YeLuo-XingHai introuvable dans SeAT. Importez d\'abord les informations de corporation.',
+
+    'report_filter_all' => 'Tous',
+    'report_filter_failed' => 'Échec',
+    'report_filter_entry' => 'Base',
+    'report_filter_advanced' => 'Avancé',
 
     'report_run_btn' => 'Lancer le contrôle',
 
@@ -44,7 +69,10 @@ return [
     'report_hull_header' => 'Totaux coque',
     'report_hull_badge' => 'COQUE',
     'report_fit_badge' => 'FIT',
-    'report_minimum_badge' => 'MIN',
-    'report_advanced_badge' => 'ADV',
+    'report_minimum_badge' => 'BASE',
+    'report_advanced_badge' => 'AVA',
     'report_not_configured_badge' => 'Avancé non configuré',
+    'report_status_failed' => 'Échec',
+    'report_status_entry' => 'Base',
+    'report_status_advanced' => 'Avancé',
 ];

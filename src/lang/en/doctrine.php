@@ -19,16 +19,41 @@ return [
     'delete_doctrine_modal_title' => 'Are you sure?',
     'delete_doctrine_modal_body' => 'Are you sure you want to delete this fitting group?',
 
+    'workspace_groups_title' => 'Fitting Groups',
+    'workspace_pool_title' => 'All Fittings',
+    'workspace_new_group_btn' => 'New Group',
+    'workspace_new_group_placeholder' => 'Enter new group name...',
+    'workspace_pool_search_placeholder' => 'Search fitting or ship...',
+    'workspace_group_empty_hint' => 'Drag fittings here',
+    'workspace_pool_empty_hint' => 'No fittings available',
+    'workspace_rename_btn' => 'Rename',
+    'workspace_remove_fit_btn' => 'Remove from group',
+    'workspace_hint' => 'Tip: drag a fitting from the right into a group on the left. The same fitting can belong to multiple groups.',
+
     'report_page_title' => 'Corporation Skill Check',
 
     'report_alliance_label' => 'Alliance',
-    'report_alliance_note' => '<b>Note:</b> Results show hull, minimum, and advanced requirement status for each fitting.',
+    'report_alliance_note' => '<b>Note:</b> Checks are currently scoped to YeLuo-XingHai inside Fraternity.[FRT].',
     'report_alliance_placeholder' => 'Select alliances',
 
     'report_corporation_label' => 'Corporation',
     'report_corporation_placeholder' => 'Select corporations',
 
     'report_doctrine_label' => 'Fitting Group',
+    'report_fitting_label' => 'Single Fitting',
+    'report_target_label' => 'Check Target',
+    'report_target_doctrine' => 'Fitting Group',
+    'report_target_fitting' => 'Single Fitting',
+
+    'report_fixed_alliance_label' => 'Alliance',
+    'report_fixed_corporation_label' => 'Corporation',
+    'report_alliance_not_found' => 'Alliance Fraternity.[FRT] not found in SeAT data. Import alliance info first.',
+    'report_corporation_not_found' => 'Corporation YeLuo-XingHai not found in SeAT data. Import corporation info first.',
+
+    'report_filter_all' => 'All',
+    'report_filter_failed' => 'Failed',
+    'report_filter_entry' => 'Baseline',
+    'report_filter_advanced' => 'Advanced',
 
     'report_run_btn' => 'Run Check',
 
@@ -44,7 +69,10 @@ return [
     'report_hull_header' => 'Hull Totals',
     'report_hull_badge' => 'HULL',
     'report_fit_badge' => 'FIT',
-    'report_minimum_badge' => 'MIN',
+    'report_minimum_badge' => 'BASE',
     'report_advanced_badge' => 'ADV',
     'report_not_configured_badge' => 'Advanced Not Set',
+    'report_status_failed' => 'Failed',
+    'report_status_entry' => 'Baseline',
+    'report_status_advanced' => 'Advanced',
 ];

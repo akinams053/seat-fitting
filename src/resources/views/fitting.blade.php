@@ -3,119 +3,47 @@
 @section('title', trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title'))
 @section('page_header', trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title'))
 
+@push('head')
+    <link rel="stylesheet" href="{{ asset('web/css/fitting.css') }}">
+@endpush
+
 @section('full')
     <div class="row">
-        <div class="col-md-4">
-    <div class="card card-primary card-solid">
-        <div class="card-header">
-            <h3 class="card-title">{{trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title')}}</h3>
-            @if($manage ?? false)
-                @can('fitting.create')
-                    <div class="card-tools pull-right">
-                        <button type="button" class="btn btn-xs btn-tool" id="addFitting" data-toggle="tooltip"
-                                data-placement="top" title="{{trans('fitting::fitting.add_new_fitting_tooltip')}}">
-                            <span class="fa fa-plus-square"></span>
-                        </button>
-                    </div>
-                @endcan
-            @endif
-        </div>
-        <div class="card-body px-2">
-            @unless($manage ?? false)
-                <div class="form-group">
-                    <label for="personalCheckMode">{{trans('fitting::fitting.check_mode_label')}}</label>
-                    <select id="personalCheckMode" class="form-control form-control-sm">
-                        <option value="single">{{trans('fitting::fitting.check_mode_single')}}</option>
-                        <option value="group">{{trans('fitting::fitting.check_mode_group')}}</option>
-                    </select>
+        <div class="col-lg-5 col-md-12">
+            <div class="card fit-card-flat">
+                <div class="card-header d-flex align-items-center">
+                    <h3 class="card-title mb-0">{{trans(($manage ?? false) ? 'fitting::fitting.manage_page_title' : 'fitting::fitting.page_title')}}</h3>
                 </div>
-                <div class="form-group" id="personalDoctrineCheckBox">
-                    <label for="personalDoctrineCheck">{{trans('fitting::fitting.check_group_label')}}</label>
-                    <select id="personalDoctrineCheck" class="form-control form-control-sm">
-                        <option value="">{{trans('fitting::fitting.check_group_placeholder')}}</option>
-                        @foreach($doctrine_list as $doctrine)
-                            <option value="{{$doctrine['id']}}">{{$doctrine['name']}}</option>
-                        @endforeach
-                    </select>
-                    <button type="button" id="runPersonalDoctrineCheck" class="btn btn-info btn-sm btn-block mt-2">
-                        {{trans('fitting::fitting.run_group_check_btn')}}
-                    </button>
-                </div>
-            @endunless
+                <div class="card-body">
+                    @if($manage ?? false)
+                        @can('fitting.create')
+                            <button type="button" class="fit-cta mb-3" id="addFitting">
+                                <i class="fa fa-plus"></i>
+                                {{trans('fitting::fitting.add_new_fitting_btn')}}
+                            </button>
+                        @endcan
+                    @endif
 
-            <!-- Search Filters -->
-            <div class="row mb-3" id="fittingSearchFilters">
-                <div class="col-md-6">
-                    <div class="input-group input-group-sm">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text"><i class="fas fa-rocket"></i></span>
-                        </div>
-                        <input type="text" id="searchShip" class="form-control" placeholder="{{trans('fitting::fitting.search_ship_placeholder')}}">
+                    <input type="text" id="fitTreeSearch" class="form-control form-control-sm fit-tree-search"
+                           placeholder="{{trans('fitting::fitting.tree_search_placeholder')}}">
+
+                    <div id="fitTree" class="fit-tree">
+                        <div class="fit-tree-empty">{{trans('fitting::fitting.tree_empty_hint')}}</div>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="input-group input-group-sm">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text"><i class="fas fa-file-signature"></i></span>
-                        </div>
-                        <input type="text" id="searchFitName" class="form-control" placeholder="{{trans('fitting::fitting.search_fit_placeholder')}}">
-                    </div>
+
+                    <hr class="my-3">
+
+                    <h6 class="text-muted">{{trans('fitting::fitting.fit_details_title')}}</h6>
+                    @include('fitting::includes.display-fit')
                 </div>
             </div>
-            
-            <table id='fitlist' class="table table-hover table-sm" style="vertical-align: top; width: 100%;">
-                <thead>
-                <tr>
-                    <th style="width: 40px;"></th>
-                    <th>{{trans('fitting::fitting.col_ship_type')}}</th>
-                    <th>{{trans('fitting::fitting.col_fit_name')}}</th>
-                    <th class="text-right" style="width: 100px;">{{trans('fitting::fitting.col_options')}}</th>
-                </tr>
-                </thead>
-                <tbody>
-                @if (count($fitlist) > 0)
-                    @foreach($fitlist as $fit)
-                        <tr class="fitid" data-id="{{ $fit['id'] }}">
-                            <td><img src='https://images.evetech.net/types/{{$fit['typeID']}}/icon?size=32'
-                                     height='24' alt="{{trans('fitting::fitting.fitting_icon_alt')}}"/>
-                            </td>
-                            <td>{{ $fit['shiptype'] }}</td>
-                            <td>{{ $fit['fitname'] }}</td>
-                            <td class="no-hover text-right" style="min-width:80px">
-                                <button type="button" id="viewfit" class="btn btn-xs btn-success"
-                                        data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
-                                        title="{{trans('fitting::fitting.view_fitting_tooltip')}}">
-                                    <span class="fa fa-eye text-white"></span>
-                                </button>
-                                @if($manage ?? false)
-                                    @can('fitting.create')
-                                        <button type="button" id="editfit" class="btn btn-xs btn-warning"
-                                                data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
-                                                title="{{trans('fitting::fitting.edit_fitting_tooltip')}}">
-                                            <span class="fas fa-edit text-white"></span>
-                                        </button>
-                                        <button type="button" id="deletefit" class="btn btn-xs btn-danger"
-                                                data-id="{{ $fit['id'] }}" data-toggle="tooltip" data-placement="top"
-                                                title="{{trans('fitting::fitting.delete_fitting_tooltip')}}">
-                                            <span class="fa fa-trash text-white"></span>
-                                        </button>
-                                    @endcan
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                @endif
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    @include('fitting::includes.display-fit')
-    @include('fitting::includes.eft-export')
-    @include('fitting::includes.edit-fit-modal')
-    @include('fitting::includes.delete-fit-modal')
+            @include('fitting::includes.eft-export')
+            @include('fitting::includes.edit-fit-modal')
+            @include('fitting::includes.delete-fit-modal')
         </div>
-        <div class="col-md-8">
+
+        <div class="col-lg-7 col-md-12">
             @include('fitting::includes.display-skills')
         </div>
     </div>
@@ -125,82 +53,27 @@
     <script src="{{ asset('web/js/fitting.js') }}"></script>
     <script src="{{ asset('web/js/fitting-jquery.js') }}"></script>
     <script type="application/javascript">
-        $('#exportLinks').hide();
-
         window.fittingManageMode = {{ ($manage ?? false) ? 'true' : 'false' }};
-        window.fittingCustomSkillLabel = "{{trans('fitting::fitting.custom_skill_type_id_label')}}";
-        window.fittingMinimumLabel = "{{trans('fitting::fitting.minimum_requirements_title')}}";
-        window.fittingAdvancedLabel = "{{trans('fitting::fitting.advanced_requirements_title')}}";
-        window.fittingNoAdvancedLabel = "{{trans('fitting::fitting.no_advanced_requirements')}}";
-        window.fittingSkillPlaceholder = "{{trans('fitting::fitting.skill_select_placeholder')}}";
-        initializeRequirementSelectors();
+        window.fittingI18n = {
+            statusFailed: "{{trans('fitting::fitting.status_failed')}}",
+            statusEntry: "{{trans('fitting::fitting.status_entry_passed')}}",
+            statusAdvanced: "{{trans('fitting::fitting.status_advanced_passed')}}",
+            statusAdvancedNotSet: "{{trans('fitting::fitting.status_advanced_not_set')}}",
+            tabEntry: "{{trans('fitting::fitting.tab_entry_label')}}",
+            tabAdvanced: "{{trans('fitting::fitting.tab_advanced_label')}}",
+            minimumTitle: "{{trans('fitting::fitting.minimum_requirements_title')}}",
+            advancedTitle: "{{trans('fitting::fitting.advanced_requirements_title')}}",
+            noCharacterSelected: "{{trans('fitting::fitting.no_character_selected')}}",
+            noAdvancedRequirements: "{{trans('fitting::fitting.no_advanced_requirements')}}",
+            skillPlaceholder: "{{trans('fitting::fitting.skill_select_placeholder')}}",
+            treeUngroupedLabel: "{{trans('fitting::fitting.tree_ungrouped_label')}}",
+            treeCheckGroupBtn: "{{trans('fitting::fitting.tree_check_group_btn')}}",
+            treeEmptyHint: "{{trans('fitting::fitting.tree_empty_hint')}}",
+            viewFittingTooltip: "{{trans('fitting::fitting.view_fitting_tooltip')}}",
+            editFittingTooltip: "{{trans('fitting::fitting.edit_fitting_tooltip')}}",
+            deleteFittingTooltip: "{{trans('fitting::fitting.delete_fitting_tooltip')}}"
+        };
 
-        // Initialize DataTable with search functionality
-        var fittingTable = $('#fitlist').DataTable({
-            "paging": true,
-            "pageLength": 25,
-            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            "searching": true,
-            "ordering": true,
-            "info": true,
-            "autoWidth": false,
-            "order": [[1, "asc"]], // Sort by ship type by default
-            "columnDefs": [
-                {
-                    "targets": 0, // Icon column
-                    "orderable": false,
-                    "searchable": false
-                },
-                {
-                    "targets": 3, // Options column
-                    "orderable": false,
-                    "searchable": false
-                }
-            ],
-            "language": {
-                "search": "{{trans('fitting::fitting.datatable_search')}}",
-                "lengthMenu": "{{trans('fitting::fitting.datatable_length')}}",
-                "info": "{{trans('fitting::fitting.datatable_info')}}",
-                "infoEmpty": "{{trans('fitting::fitting.datatable_info_empty')}}",
-                "infoFiltered": "{{trans('fitting::fitting.datatable_info_filtered')}}",
-                "zeroRecords": "{{trans('fitting::fitting.datatable_zero_records')}}",
-                "emptyTable": "{{trans('fitting::fitting.datatable_empty')}}"
-            },
-            "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>rt<"row"<"col-sm-6"i><"col-sm-6"p>>'
-        });
-
-        // Custom search for ship type column (column index 1)
-        $('#searchShip').on('keyup change', function() {
-            fittingTable.column(1).search(this.value).draw();
-        });
-
-        // Custom search for fit name column (column index 2)
-        $('#searchFitName').on('keyup change', function() {
-            fittingTable.column(2).search(this.value).draw();
-        });
-
-        // Click handlers for fitting actions
-        $('#fitlist tbody')
-            .on('click', '#deletefit', function () {
-                $('#fitConfirmModal').modal('show');
-                $('#fitSelection').val($(this).closest('tr').data('id'));
-            });
-
-        $('#deleteConfirm').on('click', function () {
-            const id = $('#fitSelection').val();
-            
-            $.ajax({
-                headers: function () {},
-                url: "/fitting/delfittingbyid/" + id,
-                type: "GET",
-                datatype: 'json',
-                timeout: 10000
-            }).done(function (result) {
-                // Remove the row from DataTable
-                fittingTable.row($('#fitlist .fitid[data-id="' + id + '"]')).remove().draw();
-            }).fail(function (xmlHttpRequest, textStatus, errorThrown) {
-                console.error('Delete failed:', errorThrown);
-            });
-        });
+        initializeFittingPage();
     </script>
 @endpush

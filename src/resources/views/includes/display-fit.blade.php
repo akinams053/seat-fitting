@@ -1,34 +1,37 @@
-<div class="card card-primary card-solid" id="fitting-box">
-    <div class="card-header">
-        <h3 class="card-title" id="middle-header"></h3>
+<input type="hidden" id="fittingId" value=""/>
+
+<div id="fitDetailEmpty" class="fit-detail-empty">
+    {{trans('fitting::fitting.fit_select_hint')}}
+</div>
+
+<div id="fitDetail" style="display:none;">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="mb-0" id="fitDetailTitle"></h6>
+        @if($manage ?? false)
+            <button type="button" class="btn btn-xs btn-outline-secondary" id="eftexportTrigger">
+                <i class="fa fa-code"></i> EFT
+            </button>
+        @endif
     </div>
-    <input type="hidden" id="fittingId" value=""/>
-    <div class="card-body">
-        <div id="fitting-window" class="accordion">
-            @foreach([
-                'highSlots' => trans('fitting::fitting.fit_high_slot_title'),
-                'midSlots' => trans('fitting::fitting.fit_mid_slot_title'),
-                'lowSlots' => trans('fitting::fitting.fit_low_slot_title'),
-                'rigs' => trans('fitting::fitting.fit_rigs_title'),
-                'subSlots' => trans('fitting::fitting.fit_subsystems_title'),
-                'drones' => trans('fitting::fitting.fit_drone_bay_title'),
-                'cargo' => trans('fitting::fitting.fit_cargo_title'),
-            ] as $slotId => $slotTitle)
-                <div class="card mb-2">
-                    <div class="card-header p-2" id="{{$slotId}}Heading">
-                        <button class="btn btn-link btn-block text-left p-0" type="button" data-toggle="collapse" data-target="#{{$slotId}}Collapse" aria-expanded="false" aria-controls="{{$slotId}}Collapse">
-                            {{$slotTitle}}
-                        </button>
-                    </div>
-                    <div id="{{$slotId}}Collapse" class="collapse" aria-labelledby="{{$slotId}}Heading">
-                        <div class="card-body p-2">
-                            <table class="table table-condensed table-striped mb-0" id="{{$slotId}}">
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
+
+    @foreach([
+        'highSlots' => trans('fitting::fitting.fit_high_slot_title'),
+        'midSlots' => trans('fitting::fitting.fit_mid_slot_title'),
+        'lowSlots' => trans('fitting::fitting.fit_low_slot_title'),
+        'rigs' => trans('fitting::fitting.fit_rigs_title'),
+        'subSlots' => trans('fitting::fitting.fit_subsystems_title'),
+        'drones' => trans('fitting::fitting.fit_drone_bay_title'),
+        'cargo' => trans('fitting::fitting.fit_cargo_title'),
+    ] as $slotId => $slotTitle)
+        <div class="fit-detail-slot" data-slot="{{$slotId}}" data-expanded="false">
+            <div class="fit-detail-slot-header" data-toggle-slot="{{$slotId}}">
+                <span class="fit-detail-slot-chevron">▶</span>
+                <span class="fit-detail-slot-title">{{$slotTitle}}</span>
+                <span class="fit-detail-slot-count text-muted ml-auto"></span>
+            </div>
+            <div class="fit-detail-slot-body">
+                <div class="fit-detail-slot-items" id="{{$slotId}}Items"></div>
+            </div>
         </div>
-    </div>
+    @endforeach
 </div>

@@ -3,6 +3,8 @@
 namespace CryptaTech\Seat\Fitting\Services;
 
 use CryptaTech\Seat\Fitting\Models\Doctrine;
+use CryptaTech\Seat\Fitting\Models\Fitting;
+use Illuminate\Support\Collection;
 use Seat\Eveapi\Models\Character\CharacterInfo;
 
 class CorporationSkillReportService
@@ -16,10 +18,23 @@ class CorporationSkillReportService
     public function run(array $allianceIds, array $corporationIds, int $doctrineId): array
     {
         $doctrine = Doctrine::with('fittings.ship')->where('id', $doctrineId)->firstOrFail();
+
+        return $this->runForFittings($allianceIds, $corporationIds, $doctrine->fittings);
+    }
+
+    public function runForFitting(array $allianceIds, array $corporationIds, int $fittingId): array
+    {
+        $fitting = Fitting::with('ship')->where('fitting_id', $fittingId)->firstOrFail();
+
+        return $this->runForFittings($allianceIds, $corporationIds, collect([$fitting]));
+    }
+
+    public function runForFittings(array $allianceIds, array $corporationIds, Collection $fittings): array
+    {
         $fittingChecks = [];
         $allRequirements = [];
 
-        foreach ($doctrine->fittings as $fitting) {
+        foreach ($fittings as $fitting) {
             $shipSkills = $this->skillMap($this->calculator->calculateForTypeId($fitting->ship_type_id));
             $minimumSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'minimum'));
             $advancedSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'advanced'));
@@ -61,7 +76,7 @@ class CorporationSkillReportService
             'charsById' => [],
         ];
 
-        foreach ($doctrine->fittings as $fitting) {
+        foreach ($fittings as $fitting) {
             $fittingId = $fitting->fitting_id;
             $shipSkills = $fittingChecks[$fittingId]['ship'];
             $minimumSkills = $fittingChecks[$fittingId]['minimum'];

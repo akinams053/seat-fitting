@@ -1,3 +1,667 @@
-.snoopy {
-    color: #28a745 !important;
+/* ============================================================
+ * akinams053/seat-fitting · UI tokens & component styles
+ * Soft palette + gentle transitions to replace the original
+ * hard bootstrap badge / bg-success / bg-danger noise.
+ * ============================================================ */
+
+:root {
+    --fit-green:        #5cb777;
+    --fit-green-soft:   #d8eddf;
+    --fit-green-text:   #2f7a48;
+    --fit-red:          #d97070;
+    --fit-red-soft:     #f4dada;
+    --fit-red-text:     #9a3a3a;
+    --fit-amber:        #e2a447;
+    --fit-amber-soft:   #f6e7c8;
+    --fit-amber-text:   #8a5a14;
+    --fit-blue:         #5c8fcf;
+    --fit-blue-soft:    #dde9f7;
+    --fit-blue-text:    #2c5a98;
+    --fit-neutral:      #d8dde2;
+    --fit-neutral-soft: #f1f3f5;
+    --fit-neutral-text: #6c757d;
+    --fit-marker:       #343a40;
+
+    --fit-radius:       4px;
+    --fit-radius-lg:    6px;
+    --fit-shadow:       0 1px 3px rgba(15, 20, 30, 0.06);
+    --fit-shadow-lift:  0 4px 12px rgba(15, 20, 30, 0.10);
+    --fit-transition:   150ms ease;
+}
+
+/* ---------- Generic helpers ---------- */
+
+.fit-card-flat {
+    background: #fff;
+    border: 1px solid #e6e9ed;
+    border-radius: var(--fit-radius-lg);
+    box-shadow: var(--fit-shadow);
+}
+
+.fit-fade-in {
+    animation: fitFadeIn 200ms ease-out;
+}
+@keyframes fitFadeIn {
+    from { opacity: 0; transform: translateY(2px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Status pill (三态状态徽章) ---------- */
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: background-color var(--fit-transition), color var(--fit-transition);
+}
+.status-pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.85;
+}
+.status-pill.is-failed {
+    background: var(--fit-red-soft);
+    color: var(--fit-red-text);
+    border-color: var(--fit-red-soft);
+}
+.status-pill.is-entry {
+    background: var(--fit-amber-soft);
+    color: var(--fit-amber-text);
+    border-color: var(--fit-amber-soft);
+}
+.status-pill.is-advanced {
+    background: var(--fit-green-soft);
+    color: var(--fit-green-text);
+    border-color: var(--fit-green-soft);
+}
+.status-pill.is-not-set {
+    background: var(--fit-neutral-soft);
+    color: var(--fit-neutral-text);
+    border-color: var(--fit-neutral-soft);
+}
+.status-pill.is-lg {
+    padding: 5px 14px;
+    font-size: 13px;
+}
+
+/* ---------- Fit tree (个人检查 / 录入页左栏父子列表) ---------- */
+
+.fit-tree {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+.fit-tree-search {
+    margin-bottom: 8px;
+}
+.fit-tree-group {
+    border-radius: var(--fit-radius);
+    margin-bottom: 4px;
+    background: var(--fit-neutral-soft);
+    overflow: hidden;
+    transition: background-color var(--fit-transition);
+}
+.fit-tree-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+    color: #2c3038;
+    font-weight: 500;
+    transition: background-color var(--fit-transition);
+}
+.fit-tree-group-header:hover {
+    background: rgba(92, 143, 207, 0.08);
+}
+.fit-tree-group-chevron {
+    display: inline-block;
+    width: 14px;
+    transition: transform var(--fit-transition);
+    color: var(--fit-neutral-text);
+}
+.fit-tree-group[data-expanded="true"] .fit-tree-group-chevron {
+    transform: rotate(90deg);
+}
+.fit-tree-group-title {
+    flex: 1;
+    font-size: 13px;
+}
+.fit-tree-group-count {
+    color: var(--fit-neutral-text);
+    font-size: 12px;
+    font-weight: normal;
+}
+.fit-tree-group-action {
+    border: none;
+    background: transparent;
+    color: var(--fit-blue-text);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    transition: background-color var(--fit-transition);
+}
+.fit-tree-group-action:hover {
+    background: var(--fit-blue-soft);
+}
+.fit-tree-group-body {
+    background: #fff;
+    display: none;
+    border-top: 1px solid #e6e9ed;
+}
+.fit-tree-group[data-expanded="true"] .fit-tree-group-body {
+    display: block;
+    animation: fitFadeIn 180ms ease-out;
+}
+.fit-tree-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 28px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background-color var(--fit-transition), border-color var(--fit-transition);
+    font-size: 13px;
+}
+.fit-tree-item:hover {
+    background: rgba(92, 143, 207, 0.06);
+}
+.fit-tree-item.is-selected {
+    background: var(--fit-blue-soft);
+    border-left-color: var(--fit-blue);
+}
+.fit-tree-item-icon {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    border-radius: 3px;
+    background-size: contain;
+}
+.fit-tree-item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fit-tree-item-ship {
+    color: var(--fit-neutral-text);
+    font-size: 11px;
+}
+.fit-tree-item-actions {
+    display: none;
+    gap: 4px;
+}
+.fit-tree-item:hover .fit-tree-item-actions,
+.fit-tree-item.is-selected .fit-tree-item-actions {
+    display: inline-flex;
+}
+.fit-tree-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--fit-neutral-text);
+    font-size: 12px;
+}
+
+/* ---------- Skill check tabs (右栏 Tab) ---------- */
+
+.skill-check-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.skill-check-tabs {
+    border-bottom: 1px solid #e6e9ed;
+    display: flex;
+    gap: 4px;
+}
+.skill-check-tab {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    color: var(--fit-neutral-text);
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: color var(--fit-transition), border-color var(--fit-transition);
+    cursor: pointer;
+    margin-bottom: -1px;
+}
+.skill-check-tab:hover {
+    color: #2c3038;
+}
+.skill-check-tab.is-active {
+    color: var(--fit-blue-text);
+    border-bottom-color: var(--fit-blue);
+}
+
+/* ---------- Skill segmented bar ---------- */
+
+.skill-row {
+    padding: 8px 10px;
+    border-radius: var(--fit-radius);
+    transition: background-color var(--fit-transition);
+}
+.skill-row.is-missing {
+    background: rgba(217, 112, 112, 0.05);
+}
+.skill-row:hover {
+    background: rgba(92, 143, 207, 0.04);
+}
+.skill-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+.skill-row-name small {
+    color: var(--fit-neutral-text);
+}
+.skill-row-meta {
+    color: var(--fit-neutral-text);
+    font-size: 11px;
+}
+.skill-row.is-missing .skill-row-meta {
+    color: var(--fit-red-text);
+}
+
+.skill-bar {
+    position: relative;
+    display: flex;
+    gap: 2px;
+    height: 12px;
+}
+.skill-bar-segment {
+    flex: 1;
+    border-radius: 2px;
+    background: var(--fit-neutral-soft);
+    border: 1px solid #e1e5e9;
+    transition: background-color 200ms ease, border-color 200ms ease;
+}
+.skill-bar-segment.is-filled {
+    background: var(--fit-green);
+    border-color: var(--fit-green);
+    animation: fitSegmentIn 220ms ease-out both;
+}
+.skill-bar-segment.is-missing {
+    background: var(--fit-red-soft);
+    border-color: var(--fit-red);
+}
+.skill-bar-segment.is-overflow {
+    background: var(--fit-green-soft);
+    border-color: var(--fit-green-soft);
+}
+.skill-bar-marker {
+    position: absolute;
+    top: -10px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--fit-marker);
+    transform: translateX(-50%);
+    pointer-events: none;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+}
+@keyframes fitSegmentIn {
+    from { transform: scaleY(0.6); opacity: 0.4; }
+    to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* ---------- Skill category group ---------- */
+
+.skill-group {
+    border: 1px solid #e6e9ed;
+    border-left-width: 4px;
+    border-radius: var(--fit-radius);
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color var(--fit-transition);
+}
+.skill-group.is-missing {
+    border-left-color: var(--fit-red);
+}
+.skill-group.is-passing {
+    border-left-color: var(--fit-green);
+}
+.skill-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--fit-neutral-soft);
+    transition: background-color var(--fit-transition);
+    font-size: 13px;
+    font-weight: 500;
+}
+.skill-group-header:hover {
+    background: #e9ecef;
+}
+.skill-group-chevron {
+    display: inline-block;
+    width: 12px;
+    color: var(--fit-neutral-text);
+    transition: transform var(--fit-transition);
+}
+.skill-group[data-expanded="true"] .skill-group-chevron {
+    transform: rotate(90deg);
+}
+.skill-group-title {
+    flex: 1;
+}
+.skill-group.is-missing .skill-group-title {
+    color: var(--fit-red-text);
+}
+.skill-group.is-passing .skill-group-title {
+    color: var(--fit-green-text);
+}
+.skill-group-body {
+    display: none;
+    padding: 8px 12px;
+    background: #fff;
+}
+.skill-group[data-expanded="true"] .skill-group-body {
+    display: block;
+    animation: fitFadeIn 180ms ease-out;
+}
+
+/* ---------- Fit detail slot accordion (左栏底部配装详情) ---------- */
+
+.fit-detail-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--fit-neutral-text);
+    font-size: 12px;
+    border: 1px dashed #d8dde2;
+    border-radius: var(--fit-radius);
+}
+.fit-detail-slot {
+    border: 1px solid #e6e9ed;
+    border-radius: var(--fit-radius);
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+.fit-detail-slot-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--fit-neutral-soft);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--fit-transition);
+}
+.fit-detail-slot-header:hover {
+    background: #e9ecef;
+}
+.fit-detail-slot-chevron {
+    width: 10px;
+    color: var(--fit-neutral-text);
+    transition: transform var(--fit-transition);
+}
+.fit-detail-slot[data-expanded="true"] .fit-detail-slot-chevron {
+    transform: rotate(90deg);
+}
+.fit-detail-slot-body {
+    display: none;
+    padding: 6px 10px;
+}
+.fit-detail-slot[data-expanded="true"] .fit-detail-slot-body {
+    display: block;
+    animation: fitFadeIn 180ms ease-out;
+}
+.fit-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 12px;
+}
+.fit-detail-item img {
+    width: 22px;
+    height: 22px;
+}
+.fit-detail-item-qty {
+    margin-left: auto;
+    color: var(--fit-neutral-text);
+}
+
+/* ---------- Big CTA (录入页) ---------- */
+
+.fit-cta {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: var(--fit-radius);
+    background: var(--fit-green);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--fit-shadow);
+    transition: transform var(--fit-transition), box-shadow var(--fit-transition), background-color var(--fit-transition);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.fit-cta:hover {
+    background: #4ea869;
+    box-shadow: var(--fit-shadow-lift);
+    transform: translateY(-1px);
+}
+.fit-cta:active {
+    transform: translateY(0);
+    box-shadow: var(--fit-shadow);
+}
+.fit-cta .fa {
+    font-size: 16px;
+}
+
+/* ---------- Doctrine workspace (分组拖拽页) ---------- */
+
+.doctrine-workspace-hint {
+    padding: 8px 12px;
+    background: var(--fit-blue-soft);
+    color: var(--fit-blue-text);
+    border-radius: var(--fit-radius);
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+
+.doctrine-groups-col,
+.doctrine-pool-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.doctrine-group {
+    border: 1px solid #e6e9ed;
+    border-radius: var(--fit-radius-lg);
+    background: #fff;
+    box-shadow: var(--fit-shadow);
+    transition: box-shadow var(--fit-transition), border-color var(--fit-transition);
+    overflow: hidden;
+}
+.doctrine-group.drag-over {
+    border-color: var(--fit-blue);
+    box-shadow: 0 0 0 3px rgba(92, 143, 207, 0.15);
+}
+.doctrine-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--fit-neutral-soft);
+    border-bottom: 1px solid #e6e9ed;
+}
+.doctrine-group-header-title {
+    flex: 1;
+    font-weight: 500;
+    font-size: 13px;
+}
+.doctrine-group-count {
+    color: var(--fit-neutral-text);
+    font-size: 11px;
+    font-weight: normal;
+}
+.doctrine-group-body {
+    padding: 10px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.doctrine-group-empty {
+    padding: 14px;
+    text-align: center;
+    color: var(--fit-neutral-text);
+    font-size: 12px;
+    border: 1px dashed #d8dde2;
+    border-radius: var(--fit-radius);
+}
+
+.doctrine-pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    max-height: 65vh;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.fit-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #e6e9ed;
+    border-radius: var(--fit-radius);
+    cursor: grab;
+    transition: transform var(--fit-transition), box-shadow var(--fit-transition), border-color var(--fit-transition);
+    user-select: none;
+}
+.fit-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--fit-shadow-lift);
+    border-color: var(--fit-blue);
+}
+.fit-card.sortable-chosen,
+.fit-card.sortable-ghost {
+    box-shadow: var(--fit-shadow-lift);
+    opacity: 0.85;
+}
+.fit-card.sortable-ghost {
+    background: var(--fit-blue-soft);
+    border-color: var(--fit-blue);
+    opacity: 0.5;
+}
+.fit-card-icon {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+}
+.fit-card-body {
+    flex: 1;
+    min-width: 0;
+}
+.fit-card-name {
+    font-size: 12px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fit-card-ship {
+    font-size: 11px;
+    color: var(--fit-neutral-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fit-card-remove {
+    border: none;
+    background: transparent;
+    color: var(--fit-red-text);
+    padding: 2px 6px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity var(--fit-transition), background-color var(--fit-transition);
+    cursor: pointer;
+}
+.doctrine-group-body .fit-card:hover .fit-card-remove {
+    opacity: 1;
+}
+.fit-card-remove:hover {
+    background: var(--fit-red-soft);
+}
+
+/* ---------- Doctrine report (军团检查页) ---------- */
+
+.report-fixed-target {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--fit-neutral-soft);
+    border-radius: var(--fit-radius);
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+.report-fixed-target-label {
+    color: var(--fit-neutral-text);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.report-fixed-target-value {
+    font-weight: 500;
+}
+
+.report-target-toggle .btn {
+    border-radius: 0;
+    border-color: var(--fit-neutral);
+}
+.report-target-toggle .btn.active {
+    background: var(--fit-blue);
+    color: #fff;
+    border-color: var(--fit-blue);
+}
+
+.report-filter-row select {
+    font-size: 11px;
+    padding: 2px 4px;
+    height: auto;
+    margin-top: 4px;
+    background: #fff;
+    border: 1px solid var(--fit-neutral);
+    border-radius: 3px;
+    color: var(--fit-neutral-text);
+}
+
+#report td.report-status-cell {
+    text-align: center;
+    vertical-align: middle;
 }
