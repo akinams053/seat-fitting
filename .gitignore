@@ -221,3 +221,13 @@ $RECYCLE.BIN/
 
 composer.lock
 vendor
+
+# SSH helper credentials (see scripts/ssh-seat, .creds.example)
+# .creds = 默认 (生产)；.creds.<target> = 其他机器，例如 .creds.test
+.creds*
+!.creds.example
+# SSH private keys (paramiko key_filename targets) — never commit
+*.key
+*.pem
+__pycache__/
+*.pyc
