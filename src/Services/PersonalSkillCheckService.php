@@ -5,7 +5,9 @@ namespace CryptaTech\Seat\Fitting\Services;
 use CryptaTech\Seat\Fitting\Models\Doctrine;
 use CryptaTech\Seat\Fitting\Models\Fitting;
 use CryptaTech\Seat\Fitting\Models\FittingSkillPlan;
+use CryptaTech\Seat\Fitting\Models\FittingSkillPlanAttachment;
 use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
+use Illuminate\Support\Facades\DB;
 use Seat\Eveapi\Models\Sde\InvType;
 
 class PersonalSkillCheckService
@@ -209,17 +211,26 @@ class PersonalSkillCheckService
     }
 
     /**
-     * Build typeId => [{plan_id, level}, ...] from every plan applicable in the given context:
-     *   - Always: plans attached directly to the fitting.
-     *   - $contextDoctrineId set: also plans from that specific doctrine.
-     *   - $contextDoctrineId null: also plans from EVERY doctrine that contains this fitting
-     *     (single-fit view has no group context — the natural reading is "fit is a member of
-     *     all of these groups, all of their plans apply").
-     * Tier-filtered.
+     * Build typeId => [{plan_id, level}, ...] from every plan applicable in the given context.
+     *
+     * Per-fit attachments are filtered by scope_doctrine_id:
+     *   - scope NULL: universal direct attach (legacy / "global" on this fit).
+     *   - scope = D : attached via doctrine D's per-fit drop zone, only applies when checking
+     *     F in a context where D is relevant.
+     *
+     * Doctrine attachments inherit normally.
+     * Tier-filtered. De-dupes plans by id when multiple paths return the same plan.
      */
     private function collectPlanContributions(Fitting $fitting, string $tier, ?int $contextDoctrineId): array
     {
-        $plans = $fitting->skillPlans()->where('tier', $tier)->with('items')->get();
+        $directPlanIds = $this->relevantDirectAttachments($fitting, $contextDoctrineId)
+            ->pluck('plan_id')
+            ->unique();
+
+        $plans = FittingSkillPlan::with('items')
+            ->whereIn('id', $directPlanIds)
+            ->where('tier', $tier)
+            ->get();
 
         if ($contextDoctrineId !== null) {
             $doctrine = Doctrine::with(['skillPlans' => function ($query) use ($tier) {
@@ -260,19 +271,36 @@ class PersonalSkillCheckService
 
     /**
      * Plan-attachment summary for the UI.
-     *   - Direct fitting attachments always included.
-     *   - $contextDoctrineId set: also that doctrine's plans (tagged via='doctrine', via_name=name).
-     *   - $contextDoctrineId null: also plans from EVERY doctrine that contains the fitting,
-     *     each tagged with its source doctrine name so the user can tell where a chip came from.
-     * A plan that appears via multiple paths is reported once (prefers the more specific
-     * 'fitting' source, then first-doctrine-seen).
+     *
+     * Direct fit attachments are scope-filtered:
+     *   - scope NULL → reported as via='fitting', via_name=null ("directly attached").
+     *   - scope = D  → reported as via='fitting', via_name=D.name ("attached via D's slot").
+     *
+     * Doctrine attachments follow the existing rules:
+     *   - context set: only that doctrine's plans.
+     *   - context null: every doctrine containing the fitting, each chip labeled with its source.
+     *
+     * A plan that appears via multiple paths is reported once.
      */
     private function attachedPlansSummary(Fitting $fitting, ?int $contextDoctrineId): array
     {
         $summary = [];
 
-        foreach ($fitting->skillPlans()->with('items.skill')->get() as $plan) {
-            $summary[] = $this->planSummaryShape($plan, 'fitting', null);
+        $direct = $this->relevantDirectAttachments($fitting, $contextDoctrineId);
+        $directPlanIds = $direct->pluck('plan_id')->unique();
+        $directPlans = FittingSkillPlan::with('items.skill')->whereIn('id', $directPlanIds)->get()->keyBy('id');
+        $scopedDoctrineIds = $direct->pluck('scope_doctrine_id')->filter()->unique()->values()->all();
+        $scopedDoctrineNames = empty($scopedDoctrineIds)
+            ? collect()
+            : Doctrine::whereIn('id', $scopedDoctrineIds)->pluck('name', 'id');
+
+        foreach ($direct as $row) {
+            $plan = $directPlans->get($row->plan_id);
+            if (! $plan) {
+                continue;
+            }
+            $viaName = $row->scope_doctrine_id ? ($scopedDoctrineNames[$row->scope_doctrine_id] ?? null) : null;
+            $summary[] = $this->planSummaryShape($plan, 'fitting', $viaName);
         }
 
         if ($contextDoctrineId !== null) {
@@ -291,18 +319,48 @@ class PersonalSkillCheckService
             }
         }
 
-        $seen = [];
-        $deduped = [];
+        /* Dedupe by plan id; prefer the 'fitting' entry over 'doctrine' if both exist (more specific). */
+        $byId = [];
         foreach ($summary as $entry) {
-            $key = $entry['id'];
-            if (isset($seen[$key])) {
-                continue;
+            if (! isset($byId[$entry['id']])) {
+                $byId[$entry['id']] = $entry;
+            } elseif ($byId[$entry['id']]['via'] === 'doctrine' && $entry['via'] === 'fitting') {
+                $byId[$entry['id']] = $entry;
             }
-            $seen[$key] = true;
-            $deduped[] = $entry;
         }
 
-        return $deduped;
+        return array_values($byId);
+    }
+
+    /**
+     * Fetch direct (attachable_type=fitting) attachments matching the given context.
+     * Returns a Collection of attachment rows (with plan_id, scope_doctrine_id) for the caller
+     * to bulk-resolve into plans + scope names.
+     */
+    private function relevantDirectAttachments(Fitting $fitting, ?int $contextDoctrineId)
+    {
+        $query = FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+            ->where('attachable_id', $fitting->fitting_id);
+
+        if ($contextDoctrineId !== null) {
+            $query->where(function ($q) use ($contextDoctrineId) {
+                $q->whereNull('scope_doctrine_id')->orWhere('scope_doctrine_id', $contextDoctrineId);
+            });
+        } else {
+            $fittingDoctrineIds = DB::table('crypta_tech_seat_doctrine_fitting')
+                ->where('fitting_id', $fitting->fitting_id)
+                ->pluck('doctrine_id')
+                ->all();
+
+            $query->where(function ($q) use ($fittingDoctrineIds) {
+                $q->whereNull('scope_doctrine_id');
+                if (! empty($fittingDoctrineIds)) {
+                    $q->orWhereIn('scope_doctrine_id', $fittingDoctrineIds);
+                }
+            });
+        }
+
+        return $query->get(['plan_id', 'scope_doctrine_id']);
     }
 
     private function doctrinePlansSummary(Doctrine $doctrine): array

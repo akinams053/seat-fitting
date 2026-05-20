@@ -90,9 +90,10 @@ function initializeDoctrineWorkspace() {
     $(document).on('click', '.fit-plan-remove', function (evt) {
         evt.stopPropagation();
         const fittingId = $(this).closest('.fit-card').data('fittingId');
+        const groupId = $(this).closest('.doctrine-group').data('groupId');
         const planId = $(this).closest('.plan-card-attached').data('planId');
-        if (!fittingId || !planId) return;
-        detachPlanFromFitting(planId, fittingId).done(loadDoctrineWorkspace);
+        if (!fittingId || !planId || !groupId) return;
+        detachPlanFromFittingInDoctrine(planId, fittingId, groupId).done(loadDoctrineWorkspace);
     });
 
     /* === Plan CRUD === */
@@ -210,13 +211,18 @@ function fitCardHtml(fit, inGroup) {
     const removeBtn = inGroup
         ? `<button class="fit-card-remove" type="button" title="${dEscape(dI18n('workspaceRemoveFitBtn'))}"><i class="fa fa-times"></i></button>`
         : '';
-    /* Per-fit attached plans area — both in pool and inside groups. Sortable target for plan
-       drops; ✕ on each chip detaches. */
-    const fitPlanChips = (fit.plans || []).map(p => planAttachedCardHtml(p, 'fit')).join('');
-    const fitPlanEmpty = inGroup
-        ? `<span class="fit-plans-empty text-muted small">${dEscape(dI18n('workspaceFitPlansEmpty'))}</span>`
+
+    /* Per-fit attached plans only render on fits INSIDE a doctrine group; the pool has no
+       doctrine context to scope a per-fit attach to. */
+    const planChipsHtml = inGroup
+        ? (() => {
+            const chips = (fit.plans || []).map(p => planAttachedCardHtml(p, 'fit')).join('');
+            const empty = `<span class="fit-plans-empty text-muted small">${dEscape(dI18n('workspaceFitPlansEmpty'))}</span>`;
+            return `<div class="fit-card-plans" data-fitting-id="${fit.id}">${chips || empty}</div>`;
+        })()
         : '';
-    return `<div class="fit-card has-plans" data-fitting-id="${fit.id}">
+
+    return `<div class="fit-card ${inGroup ? 'has-plans' : ''}" data-fitting-id="${fit.id}">
         <div class="fit-card-main">
             <img class="fit-card-icon" src="${iconUrl}" alt="">
             <div class="fit-card-body">
@@ -225,23 +231,23 @@ function fitCardHtml(fit, inGroup) {
             </div>
             ${removeBtn}
         </div>
-        <div class="fit-card-plans" data-fitting-id="${fit.id}">
-            ${fitPlanChips || fitPlanEmpty}
-        </div>
+        ${planChipsHtml}
     </div>`;
 }
 
 function planPoolCardHtml(plan) {
     const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+    const accent = planAccentColor(plan.id);
     const actions = window.doctrineI18n.canCreate
         ? `<span class="plan-pool-card-actions">
              <button type="button" class="btn btn-xs btn-link text-muted plan-pool-card-edit" title="${dEscape(dI18n('planEditTooltip'))}"><i class="fa fa-pen"></i></button>
              <button type="button" class="btn btn-xs btn-link text-danger plan-pool-card-delete" title="${dEscape(dI18n('planDeleteTooltip'))}"><i class="fa fa-trash"></i></button>
            </span>`
         : '';
-    return `<div class="plan-pool-card" data-plan-id="${plan.id}" data-tier="${plan.tier}">
+    return `<div class="plan-pool-card" data-plan-id="${plan.id}" data-tier="${plan.tier}" style="border-left-color: ${accent};">
         <span class="plan-card-grip"><i class="fa fa-grip-vertical"></i></span>
+        <span class="plan-accent-dot" style="background:${accent};"></span>
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
         ${actions}
@@ -253,8 +259,10 @@ function planAttachedCardHtml(plan, scope) {
               'fit'   → fit-level   (✕ uses fit-plan-remove) */
     const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+    const accent = planAccentColor(plan.id);
     const removeClass = scope === 'fit' ? 'fit-plan-remove' : 'group-plan-remove';
-    return `<div class="plan-card-attached" data-plan-id="${plan.id}">
+    return `<div class="plan-card-attached" data-plan-id="${plan.id}" style="border-left-color: ${accent};">
+        <span class="plan-accent-dot" style="background:${accent};"></span>
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
         <button type="button" class="plan-card-remove ${removeClass}" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>
@@ -357,10 +365,9 @@ function wireSortables() {
         }));
     });
 
-    /* Per-fit plan drop zones (inside group fit cards). Pool fit cards also have them
-       but attaching there feels surprising (the fit isn't visibly "in" any group yet) —
-       still allowed for symmetry: a plan dragged onto any fit card attaches directly. */
-    $('.fit-card-plans').each(function () {
+    /* Per-fit plan drop zones — only on fits inside doctrine groups (the pool's fit cards
+       have no .fit-card-plans). The doctrine context comes from the enclosing .doctrine-group. */
+    $('.doctrine-group .fit-card-plans').each(function () {
         const el = this;
         DoctrineState.sortables.push(new Sortable(el, {
             group: {name: 'doctrine-plans', pull: false, put: true},
@@ -369,8 +376,9 @@ function wireSortables() {
             chosenClass: 'sortable-chosen',
             onAdd: function (evt) {
                 const fittingId = $(el).data('fittingId');
+                const groupId = $(el).closest('.doctrine-group').data('groupId');
                 const planId = $(evt.item).data('planId');
-                if (!fittingId || !planId) {
+                if (!fittingId || !planId || !groupId) {
                     evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
                     return;
                 }
@@ -380,7 +388,7 @@ function wireSortables() {
                     return;
                 }
 
-                attachPlanToFitting(planId, fittingId)
+                attachPlanToFittingInDoctrine(planId, fittingId, groupId)
                     .done(loadDoctrineWorkspace)
                     .fail(loadDoctrineWorkspace);
             },

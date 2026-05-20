@@ -120,6 +120,9 @@ class FittingController extends Controller
             FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
                 ->where('attachable_id', (int) $id)
                 ->delete();
+            FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+                ->where('scope_doctrine_id', (int) $id)
+                ->delete();
             Doctrine::destroy($id);
         });
 
@@ -522,14 +525,27 @@ class FittingController extends Controller
             ->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
             ->groupBy('attachable_id');
 
-        $fitPlansFor = function (int $fittingId) use ($planAttachmentsByFittingId, $plansById) {
+        /* Per-fit plan list for a fit in a SPECIFIC doctrine: include scope NULL (universal) +
+           scope = that doctrine. Pool fits don't get a plans list — pool has no doctrine context
+           so per-fit attaches can't meaningfully target it. */
+        $fitPlansInDoctrine = function (int $fittingId, int $doctrineId) use ($planAttachmentsByFittingId, $plansById) {
             $rows = $planAttachmentsByFittingId->get($fittingId) ?? collect();
 
-            return $rows->pluck('plan_id')->map(function ($pid) use ($plansById) {
-                $p = $plansById->get($pid);
+            return $rows
+                ->filter(fn ($r) => $r->scope_doctrine_id === null || (int) $r->scope_doctrine_id === $doctrineId)
+                ->map(function ($r) use ($plansById) {
+                    $p = $plansById->get($r->plan_id);
 
-                return $p ? ['id' => $p->id, 'name' => $p->name, 'tier' => $p->tier] : null;
-            })->filter()->values()->all();
+                    return $p ? [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'tier' => $p->tier,
+                        'scope_doctrine_id' => $r->scope_doctrine_id !== null ? (int) $r->scope_doctrine_id : null,
+                    ] : null;
+                })
+                ->filter()
+                ->values()
+                ->all();
         };
 
         $pool = $fittings->map(fn ($f) => [
@@ -537,13 +553,12 @@ class FittingController extends Controller
             'name' => $f->name,
             'shipType' => $f->ship?->typeName,
             'typeID' => $f->ship_type_id,
-            'plans' => $fitPlansFor($f->fitting_id),
         ])->values();
 
         $doctrines = Doctrine::with('fittings:fitting_id')->orderBy('name')->get();
         $byId = $fittings->keyBy('fitting_id');
-        $groups = $doctrines->map(function (Doctrine $d) use ($byId, $planAttachmentsByDoctrineId, $plansById, $fitPlansFor) {
-            $items = $d->fittings->map(function ($pivotFit) use ($byId, $fitPlansFor) {
+        $groups = $doctrines->map(function (Doctrine $d) use ($byId, $planAttachmentsByDoctrineId, $plansById, $fitPlansInDoctrine) {
+            $items = $d->fittings->map(function ($pivotFit) use ($byId, $d, $fitPlansInDoctrine) {
                 $f = $byId->get($pivotFit->fitting_id);
                 if (! $f) {
                     return null;
@@ -554,7 +569,7 @@ class FittingController extends Controller
                     'name' => $f->name,
                     'shipType' => $f->ship?->typeName,
                     'typeID' => $f->ship_type_id,
-                    'plans' => $fitPlansFor($f->fitting_id),
+                    'plans' => $fitPlansInDoctrine($f->fitting_id, $d->id),
                 ];
             })->filter()->values();
 
@@ -622,6 +637,10 @@ class FittingController extends Controller
             FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
                 ->where('attachable_id', $doctrine->id)
                 ->delete();
+            /* Doctrine-scoped per-fit attachments become orphans when the doctrine vanishes — clean. */
+            FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+                ->where('scope_doctrine_id', $doctrine->id)
+                ->delete();
             $doctrine->fittings()->detach();
             $doctrine->delete();
         });
@@ -643,7 +662,15 @@ class FittingController extends Controller
     public function detachFittingFromDoctrine($id, $fittingId)
     {
         $doctrine = Doctrine::findOrFail($id);
-        $doctrine->fittings()->detach((int) $fittingId);
+        DB::transaction(function () use ($doctrine, $fittingId) {
+            /* Drop scoped per-fit attachments for this (fitting, doctrine) pair so
+               the now-removed fit doesn't keep ghost requirements via that doctrine. */
+            FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+                ->where('attachable_id', (int) $fittingId)
+                ->where('scope_doctrine_id', $doctrine->id)
+                ->delete();
+            $doctrine->fittings()->detach((int) $fittingId);
+        });
 
         DoctrineUpdated::dispatch($doctrine);
 
@@ -866,6 +893,7 @@ class FittingController extends Controller
             'plan_id' => (int) $id,
             'attachable_type' => FittingSkillPlan::ATTACHABLE_FITTING,
             'attachable_id' => (int) $fittingId,
+            'scope_doctrine_id' => null,
         ]);
 
         return response()->json(['ok' => true]);
@@ -876,6 +904,34 @@ class FittingController extends Controller
         FittingSkillPlanAttachment::where('plan_id', (int) $id)
             ->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
             ->where('attachable_id', (int) $fittingId)
+            ->whereNull('scope_doctrine_id')
+            ->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function attachPlanToFittingInDoctrine($id, $fittingId, $doctrineId)
+    {
+        FittingSkillPlan::findOrFail($id);
+        Fitting::findOrFail($fittingId);
+        Doctrine::findOrFail($doctrineId);
+
+        FittingSkillPlanAttachment::firstOrCreate([
+            'plan_id' => (int) $id,
+            'attachable_type' => FittingSkillPlan::ATTACHABLE_FITTING,
+            'attachable_id' => (int) $fittingId,
+            'scope_doctrine_id' => (int) $doctrineId,
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function detachPlanFromFittingInDoctrine($id, $fittingId, $doctrineId)
+    {
+        FittingSkillPlanAttachment::where('plan_id', (int) $id)
+            ->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+            ->where('attachable_id', (int) $fittingId)
+            ->where('scope_doctrine_id', (int) $doctrineId)
             ->delete();
 
         return response()->json(['ok' => true]);
@@ -969,15 +1025,20 @@ class FittingController extends Controller
                 ]);
             }
 
-            $directPlans = FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+            /* Only clone universal (scope=null) direct attachments. Doctrine-scoped attachments
+               belong to the source's specific (fit, doctrine) tuple and would point at a doctrine
+               the copy isn't a member of yet — leave them with the original. */
+            $universalDirectPlans = FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
                 ->where('attachable_id', $source->fitting_id)
+                ->whereNull('scope_doctrine_id')
                 ->pluck('plan_id');
 
-            foreach ($directPlans as $planId) {
+            foreach ($universalDirectPlans as $planId) {
                 FittingSkillPlanAttachment::create([
                     'plan_id' => $planId,
                     'attachable_type' => FittingSkillPlan::ATTACHABLE_FITTING,
                     'attachable_id' => $copy->fitting_id,
+                    'scope_doctrine_id' => null,
                 ]);
             }
 

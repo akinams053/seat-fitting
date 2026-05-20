@@ -217,6 +217,16 @@ Route::group([
             'uses' => 'FittingController@detachPlanFromFitting',
             'middleware' => 'can:fitting.create',
         ]);
+        Route::post('/plans/{id}/fittings/{fittingId}/doctrines/{doctrineId}', [
+            'as' => 'cryptafitting::plans.attachFittingInDoctrine',
+            'uses' => 'FittingController@attachPlanToFittingInDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::delete('/plans/{id}/fittings/{fittingId}/doctrines/{doctrineId}', [
+            'as' => 'cryptafitting::plans.detachFittingInDoctrine',
+            'uses' => 'FittingController@detachPlanFromFittingInDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
         Route::post('/plans/{id}/doctrines/{doctrineId}', [
             'as' => 'cryptafitting::plans.attachDoctrine',
             'uses' => 'FittingController@attachPlanToDoctrine',

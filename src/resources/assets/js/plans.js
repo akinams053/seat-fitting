@@ -19,6 +19,26 @@ function planEscape(value) {
     return $('<div>').text(value == null ? '' : value).html();
 }
 
+/* Deterministic per-plan accent color so two different plans never look identical.
+   10-color palette, hash by plan id so the assignment is stable across page reloads. */
+const PLAN_PALETTE = [
+    '#3b82f6', /* blue */
+    '#16a34a', /* green */
+    '#dc2626', /* red */
+    '#a855f7', /* purple */
+    '#ea580c', /* orange */
+    '#0891b2', /* cyan */
+    '#ca8a04', /* gold */
+    '#db2777', /* magenta */
+    '#475569', /* slate */
+    '#65a30d', /* lime */
+];
+
+function planAccentColor(planId) {
+    const n = parseInt(planId) || 0;
+    return PLAN_PALETTE[Math.abs(n) % PLAN_PALETTE.length];
+}
+
 /* Modal handlers are wired once on first DOMContentLoaded; safe to load on
    pages that don't include the modal — the selectors simply match nothing. */
 $(function () {
@@ -171,6 +191,26 @@ function detachPlanFromFitting(planId, fittingId) {
     });
 }
 
+function attachPlanToFittingInDoctrine(planId, fittingId, doctrineId) {
+    return $.ajax({
+        url: '/fitting/plans/' + planId + '/fittings/' + fittingId + '/doctrines/' + doctrineId,
+        type: 'POST',
+        dataType: 'json',
+        data: {_token: window.doctrineCsrf || window.fittingCsrf},
+        timeout: 10000,
+    });
+}
+
+function detachPlanFromFittingInDoctrine(planId, fittingId, doctrineId) {
+    return $.ajax({
+        url: '/fitting/plans/' + planId + '/fittings/' + fittingId + '/doctrines/' + doctrineId,
+        type: 'POST',
+        dataType: 'json',
+        data: {_token: window.doctrineCsrf || window.fittingCsrf, _method: 'DELETE'},
+        timeout: 10000,
+    });
+}
+
 function attachPlanToDoctrine(planId, doctrineId) {
     return $.ajax({
         url: '/fitting/plans/' + planId + '/doctrines/' + doctrineId,
@@ -223,12 +263,14 @@ function renderAttachedPlanCard(plan) {
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
     const viaLabel = plan.via === 'doctrine'
         ? (planI18n('planViaDoctrine') || 'via group') + (plan.via_name ? `: ${planEscape(plan.via_name)}` : '')
-        : (planI18n('planVia') || 'attached');
+        : (plan.via_name ? (planI18n('planVia') || 'attached') + `: ${planEscape(plan.via_name)}` : (planI18n('planVia') || 'attached'));
     const items = (plan.items || []).slice(0, 6).map(item => `<span class="plan-preview-chip">${planEscape(item.type_name)} <strong>${item.level}</strong></span>`).join('');
     const overflow = (plan.items || []).length > 6 ? `<span class="plan-preview-chip">…+${(plan.items || []).length - 6}</span>` : '';
+    const accent = planAccentColor(plan.id);
 
-    return `<div class="attached-plan-card" data-plan-id="${plan.id}">
+    return `<div class="attached-plan-card" data-plan-id="${plan.id}" style="border-left-color: ${accent};">
         <div class="attached-plan-card-head">
+            <span class="plan-accent-dot" style="background:${accent};"></span>
             <span class="attached-plan-card-name">${planEscape(plan.name)}</span>
             <span class="plan-card-tier ${tierClass}">${tierLabel}</span>
         </div>

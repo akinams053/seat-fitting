@@ -831,9 +831,36 @@ tr.report-alt-detail > td {
 .plan-card-attached .plan-card-remove { background: none; border: none; color: #999; padding: 0 0 0 4px; cursor: pointer; }
 .plan-card-attached .plan-card-remove:hover { color: #c44; }
 
-/* Per-fit attached-plans drop zone inside doctrine workspace fit cards. */
-.fit-card.has-plans { display: flex; flex-direction: column; gap: 4px; }
+/* Per-fit attached-plans drop zone — sits to the RIGHT of the fit details inside doctrine
+   workspace fit cards. Stacks below on narrow viewports. */
+.fit-card.has-plans { display: flex; flex-direction: row; align-items: stretch; gap: 8px; }
+.fit-card.has-plans .fit-card-main { flex: 0 1 auto; min-width: 0; }
 .fit-card-main { display: flex; align-items: center; gap: 8px; }
-.fit-card-plans { min-height: 22px; display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 8px 4px 40px; }
-.fit-card-plans .plan-card-attached { padding: 2px 6px; font-size: 11px; border-left-width: 2px; }
-.fit-plans-empty { font-size: 11px; opacity: 0.6; padding: 2px 0; }
+.fit-card-plans {
+    flex: 1 1 auto;
+    min-width: 120px;
+    min-height: 26px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-left: 1px dashed #e2e6ea;
+}
+.fit-card-plans .plan-card-attached { padding: 2px 6px; font-size: 11px; border-left-width: 3px; }
+.fit-plans-empty { font-size: 11px; opacity: 0.55; padding: 2px 4px; }
+
+/* Per-plan accent dot — repeats the border-left color as a small dot inside the chip so
+   the assignment is recognizable even when the left border is clipped (e.g. tight rows). */
+.plan-accent-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .fit-card.has-plans { flex-direction: column; }
+    .fit-card-plans { border-left: none; border-top: 1px dashed #e2e6ea; padding-left: 40px; }
+}
