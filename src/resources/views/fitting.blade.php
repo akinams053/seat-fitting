@@ -66,6 +66,7 @@
             noCharacterSelected: "{{trans('fitting::fitting.no_character_selected')}}",
             noAdvancedRequirements: "{{trans('fitting::fitting.no_advanced_requirements')}}",
             skillPlaceholder: "{{trans('fitting::fitting.skill_select_placeholder')}}",
+            skillLevelChipPrefix: "{{trans('fitting::fitting.skill_level_chip_prefix')}}",
             treeUngroupedLabel: "{{trans('fitting::fitting.tree_ungrouped_label')}}",
             treeCheckGroupBtn: "{{trans('fitting::fitting.tree_check_group_btn')}}",
             treeEmptyHint: "{{trans('fitting::fitting.tree_empty_hint')}}",

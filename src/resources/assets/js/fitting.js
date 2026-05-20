@@ -626,7 +626,7 @@ function renderSkillBar(currentLevel, requiredLevel) {
     }
     const targetCls = requiredLevel === 0 ? '' : (passed ? 'is-passing' : 'is-missing');
     const target = requiredLevel > 0
-        ? `<span class="skill-bar-target ${targetCls}">Lv ${requiredLevel}</span>`
+        ? `<span class="skill-bar-target ${targetCls}">${escapeHtml(fitI18n('skillLevelChipPrefix') || 'Lv')} ${requiredLevel}</span>`
         : '';
     return `<div class="skill-bar-wrap"><div class="skill-bar">${segments.join('')}</div>${target}</div>`;
 }

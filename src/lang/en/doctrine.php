@@ -76,4 +76,7 @@ return [
     'report_status_failed' => 'Failed',
     'report_status_entry' => 'Baseline',
     'report_status_advanced' => 'Advanced',
+    'report_main_character_header' => 'Main',
+    'report_alt_character_label' => 'Alt',
+    'report_orphan_label' => 'Unregistered',
 ];

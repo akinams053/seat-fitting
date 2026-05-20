@@ -63,6 +63,7 @@ return [
     'advanced_requirements_title' => '进阶要求',
     'tab_entry_label' => '入门',
     'tab_advanced_label' => '进阶',
+    'skill_level_chip_prefix' => '等级',
     'status_failed' => '未达标',
     'status_entry_passed' => '入门完成',
     'status_advanced_passed' => '进阶完成',

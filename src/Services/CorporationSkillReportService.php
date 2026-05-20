@@ -6,6 +6,8 @@ use CryptaTech\Seat\Fitting\Models\Doctrine;
 use CryptaTech\Seat\Fitting\Models\Fitting;
 use Illuminate\Support\Collection;
 use Seat\Eveapi\Models\Character\CharacterInfo;
+use Seat\Eveapi\Models\RefreshToken;
+use Seat\Web\Models\User;
 
 class CorporationSkillReportService
 {
@@ -133,7 +135,119 @@ class CorporationSkillReportService
         $data['totals']['chars'] = $characterSnapshots->count();
         $data['totalsByFittingId']['chars'] = $characterSnapshots->count();
 
+        $data['usersById'] = $this->aggregateByUser($characterSnapshots, $fittings, $data['charsById']);
+
         return $data;
+    }
+
+    /**
+     * Group character results by SeAT user (account) so the report can collapse alts under their main.
+     *
+     * Characters with no RefreshToken row (never registered in SeAT) become single-character pseudo-users
+     * keyed by character_id so they still show up in the table.
+     */
+    private function aggregateByUser(Collection $characterSnapshots, Collection $fittings, array $charsById): array
+    {
+        $characterIds = $characterSnapshots->keys()->all();
+        $tokens = RefreshToken::whereIn('character_id', $characterIds)
+            ->select('character_id', 'user_id')
+            ->get()
+            ->keyBy('character_id');
+
+        $userIds = $tokens->pluck('user_id')->unique()->values()->all();
+        $users = User::whereIn('id', $userIds)
+            ->select('id', 'main_character_id')
+            ->get()
+            ->keyBy('id');
+
+        $mainCharIds = $users->pluck('main_character_id')->filter()->unique()->values()->all();
+        $mainCharInfo = CharacterInfo::whereIn('character_id', $mainCharIds)
+            ->select('character_id', 'name', 'title')
+            ->get()
+            ->keyBy('character_id');
+
+        $usersById = [];
+
+        foreach ($characterSnapshots as $characterId => $character) {
+            $token = $tokens->get($characterId);
+            $userKey = $token ? 'user:'.$token->user_id : 'orphan:'.$characterId;
+
+            if (! isset($usersById[$userKey])) {
+                if ($token) {
+                    $user = $users->get($token->user_id);
+                    $mainCharId = $user?->main_character_id;
+                    $mainChar = $mainCharId ? $mainCharInfo->get($mainCharId) : null;
+                    $usersById[$userKey] = [
+                        'user_id' => $token->user_id,
+                        'is_orphan' => false,
+                        'main_character_id' => $mainCharId,
+                        'main_character_name' => $mainChar?->name ?? $character['name'],
+                        'main_character_title' => $mainChar?->title ?? $character['title'],
+                        'characters' => [],
+                        'fittings' => [],
+                    ];
+                } else {
+                    $usersById[$userKey] = [
+                        'user_id' => null,
+                        'is_orphan' => true,
+                        'main_character_id' => $characterId,
+                        'main_character_name' => $character['name'],
+                        'main_character_title' => $character['title'],
+                        'characters' => [],
+                        'fittings' => [],
+                    ];
+                }
+            }
+
+            $usersById[$userKey]['characters'][$characterId] = [
+                'character_id' => $characterId,
+                'name' => $character['name'],
+                'title' => $character['title'],
+                'is_main' => $characterId == $usersById[$userKey]['main_character_id'],
+                'fittings' => $charsById[$characterId]['fittings'] ?? [],
+            ];
+        }
+
+        /* Per-user aggregation across alts: max status + count of alts at that status. */
+        foreach ($usersById as &$u) {
+            $altCount = count($u['characters']);
+            foreach ($fittings as $fitting) {
+                $fittingId = $fitting->fitting_id;
+                $hasAdvancedConfig = null;
+                $minCount = 0;
+                $advCount = 0;
+
+                foreach ($u['characters'] as $char) {
+                    $check = $char['fittings'][$fittingId] ?? null;
+                    if (! $check) {
+                        continue;
+                    }
+                    if ($check['minimum']) {
+                        $minCount++;
+                    }
+                    if ($check['advanced'] === true) {
+                        $advCount++;
+                    }
+                    if ($check['advanced'] !== null) {
+                        $hasAdvancedConfig = true;
+                    }
+                }
+
+                $u['fittings'][$fittingId] = [
+                    'character_count' => $altCount,
+                    'minimum_count' => $minCount,
+                    'advanced_count' => $hasAdvancedConfig ? $advCount : null,
+                    'minimum' => $minCount > 0,
+                    'advanced' => $hasAdvancedConfig ? ($advCount > 0) : null,
+                ];
+            }
+        }
+        unset($u);
+
+        /* Sort by main character name (case-insensitive) for stable, alphabetical display. */
+        uasort($usersById, fn ($a, $b) => strcasecmp($a['main_character_name'] ?? '', $b['main_character_name'] ?? ''));
+
+        return $usersById;
     }
 
     private function skillMap(array $skills): array

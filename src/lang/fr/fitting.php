@@ -63,6 +63,7 @@ return [
     'advanced_requirements_title' => 'Exigences avancées',
     'tab_entry_label' => 'Base',
     'tab_advanced_label' => 'Avancé',
+    'skill_level_chip_prefix' => 'Niv.',
     'status_failed' => 'Non atteint',
     'status_entry_passed' => 'Base atteinte',
     'status_advanced_passed' => 'Avancé atteint',

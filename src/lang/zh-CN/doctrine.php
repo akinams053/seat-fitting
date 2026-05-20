@@ -76,4 +76,7 @@ return [
     'report_status_failed' => '未达标',
     'report_status_entry' => '入门',
     'report_status_advanced' => '进阶',
+    'report_main_character_header' => '主角色',
+    'report_alt_character_label' => '小号',
+    'report_orphan_label' => '未注册',
 ];

@@ -63,6 +63,7 @@ return [
     'advanced_requirements_title' => 'Advanced Requirements',
     'tab_entry_label' => 'Baseline',
     'tab_advanced_label' => 'Advanced',
+    'skill_level_chip_prefix' => 'Lv',
     'status_failed' => 'Not Met',
     'status_entry_passed' => 'Baseline Met',
     'status_advanced_passed' => 'Advanced Met',
