@@ -38,6 +38,16 @@
                     <div id="doctrinePool" class="doctrine-pool"></div>
                 </div>
             </div>
+
+            <div class="card fit-card-flat">
+                <div class="card-header d-flex align-items-center">
+                    <h3 class="card-title mb-0">{{trans('fitting::doctrine.workspace_plan_pool_title')}}</h3>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted d-block mb-2">{{trans('fitting::doctrine.workspace_plan_pool_hint')}}</small>
+                    <div id="doctrinePlanPool" class="doctrine-plan-pool"></div>
+                </div>
+            </div>
         </div>
     </div>
 @endsection
@@ -54,7 +64,12 @@
             workspaceRenameBtn: "{{trans('fitting::doctrine.workspace_rename_btn')}}",
             deleteDoctrineBtn: "{{trans('fitting::doctrine.delete_doctrine_btn')}}",
             workspaceRemoveFitBtn: "{{trans('fitting::doctrine.workspace_remove_fit_btn')}}",
+            workspacePlanPoolEmpty: "{{trans('fitting::doctrine.workspace_plan_pool_empty')}}",
+            workspaceGroupPlansEmpty: "{{trans('fitting::doctrine.workspace_group_plans_empty')}}",
+            workspaceRemovePlanBtn: "{{trans('fitting::doctrine.workspace_remove_plan_btn')}}",
             deleteDoctrineConfirm: "{{trans('fitting::doctrine.delete_doctrine_modal_body')}}",
+            tierEntry: "{{trans('fitting::fitting.tab_entry_label')}}",
+            tierAdvanced: "{{trans('fitting::fitting.tab_advanced_label')}}",
             canCreate: {{ auth()->user()->can('fitting.create') ? 'true' : 'false' }}
         };
         window.doctrineCsrf = "{{ csrf_token() }}";

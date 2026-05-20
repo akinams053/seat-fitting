@@ -782,3 +782,51 @@ tr.report-alt-detail > td {
 .report-alt-detail-table > tbody > tr:first-child > td {
     border-top: none;
 }
+
+/* ============================================================
+ *  Auxiliary skill plans
+ * ============================================================ */
+.plan-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.plan-list-empty { padding: 12px; text-align: center; }
+
+.plan-card { background: #fff; border: 1px solid #dfe3e8; border-radius: 6px; padding: 8px 10px; cursor: grab; transition: box-shadow 120ms; }
+.plan-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-color: #c9ced3; }
+.plan-card-ghost { opacity: 0.5; background: #fff7e1; }
+.plan-card-head { display: flex; align-items: center; gap: 6px; }
+.plan-card-grip { color: #b3b9be; }
+.plan-card-name { flex: 1; font-weight: 600; font-size: 13px; }
+.plan-card-tier { font-size: 11px; padding: 1px 6px; border-radius: 10px; }
+.plan-tier-minimum { background: #e3f2e1; color: #2c7a2c; }
+.plan-tier-advanced { background: #e1ecf7; color: #1d5a98; }
+.plan-card-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; color: #888; }
+.plan-card-attached { margin-left: 4px; }
+.plan-card-actions { margin-left: auto; display: inline-flex; gap: 4px; }
+
+.plan-preview-items { display: flex; flex-wrap: wrap; gap: 4px; max-height: 220px; overflow-y: auto; padding: 4px; background: #fafbfc; border-radius: 4px; }
+.plan-preview-chip { display: inline-block; background: #eef0f3; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+.plan-preview-unmatched { font-size: 12px; color: #b04545; }
+
+.plan-attached-block { padding-top: 6px; border-top: 1px dashed #dfe3e8; }
+.plan-attached-list { min-height: 36px; display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.attached-plan-card { background: #fafbfc; border: 1px solid #e2e6ea; border-left: 3px solid #88a; border-radius: 4px; padding: 6px 8px; }
+.attached-plan-card-head { display: flex; align-items: center; gap: 6px; }
+.attached-plan-card-name { font-weight: 600; font-size: 12.5px; flex: 1; }
+.attached-plan-card-remove { margin-left: auto; }
+.attached-plan-card-via { margin-top: 2px; }
+.attached-plan-card-items { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Training time + export-missing UI */
+.training-time-summary { background: #fff8e1; border-left: 3px solid #f0ad4e; padding: 6px 10px; margin-bottom: 8px; font-size: 12px; }
+.export-missing-btn { float: right; }
+.export-missing-textarea { font-family: monospace; font-size: 12px; }
+
+/* Doctrine workspace plan pool */
+.doctrine-plan-pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; min-height: 40px; }
+.plan-pool-card { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #dfe3e8; border-radius: 6px; padding: 6px 10px; cursor: grab; transition: box-shadow 120ms; }
+.plan-pool-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-color: #c9ced3; }
+.plan-pool-card-name { flex: 1; font-weight: 600; font-size: 12.5px; }
+
+.doctrine-group-plans-body { min-height: 32px; padding: 6px; background: #fafbfc; border-top: 1px dashed #e2e6ea; border-radius: 0 0 4px 4px; display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-card-attached { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e6ea; border-left: 3px solid #88a; border-radius: 4px; padding: 3px 8px; }
+.plan-card-attached .plan-card-remove { background: none; border: none; color: #999; padding: 0 0 0 4px; cursor: pointer; }
+.plan-card-attached .plan-card-remove:hover { color: #c44; }

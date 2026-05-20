@@ -29,7 +29,12 @@ return [
     'workspace_groups_empty_hint' => 'No fitting groups yet. Click "New Group" to create one.',
     'workspace_rename_btn' => 'Rename',
     'workspace_remove_fit_btn' => 'Remove from group',
-    'workspace_hint' => 'Tip: drag a fitting from the right into a group on the left. The same fitting can belong to multiple groups.',
+    'workspace_hint' => 'Tip: drag a fitting from the right into a group on the left. The same fitting can belong to multiple groups. Skill plans dropped on a group apply to every fitting it contains.',
+    'workspace_plan_pool_title' => 'Auxiliary Skill Plans',
+    'workspace_plan_pool_hint' => 'Drag a plan onto a group below. The plan will raise requirements for every fitting in that group, tier-by-tier.',
+    'workspace_plan_pool_empty' => 'No plans available. Create one in "Fitting & Skill Management".',
+    'workspace_group_plans_empty' => 'Drop a skill plan here',
+    'workspace_remove_plan_btn' => 'Remove plan from group',
 
     'report_page_title' => 'Corporation Skill Check',
 

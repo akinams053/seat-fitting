@@ -38,8 +38,8 @@ class CorporationSkillReportService
 
         foreach ($fittings as $fitting) {
             $shipSkills = $this->skillMap($this->calculator->calculateForTypeId($fitting->ship_type_id));
-            $minimumSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'minimum'));
-            $advancedSkills = $this->skillMap($this->personalSkillCheck->requirementsForTier($fitting, 'advanced'));
+            $minimumSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'minimum'));
+            $advancedSkills = $this->skillMap($this->personalSkillCheck->effectiveRequirementsForTier($fitting, 'advanced'));
 
             $fittingChecks[$fitting->fitting_id] = [
                 'ship' => $shipSkills,

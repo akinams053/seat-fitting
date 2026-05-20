@@ -106,6 +106,52 @@ function initializeFittingPage() {
         $('#fitSelection').val(id);
     });
 
+    $(document).on('click', '.fit-tree-item-action-rename', function (evt) {
+        evt.stopPropagation();
+        const item = $(this).closest('.fit-tree-item');
+        $('#fitRenameId').val(item.data('id'));
+        $('#fitRenameName').val(item.data('name'));
+        $('#fitRenameModal').modal('show');
+    });
+
+    $(document).on('click', '#fitRenameSaveBtn', function () {
+        const id = $('#fitRenameId').val();
+        const name = ($('#fitRenameName').val() || '').trim();
+        if (!id || !name) return;
+        $.ajax({
+            url: '/fitting/fittings/' + id,
+            type: 'POST',
+            dataType: 'json',
+            data: {_token: window.fittingCsrf, _method: 'PATCH', name: name},
+            timeout: 10000,
+        }).done(function () {
+            $('#fitRenameModal').modal('hide');
+            loadFittingTree();
+            if (parseInt(FittingState.selectedFittingId) === parseInt(id)) {
+                FittingState.selectedFittingName = name;
+                loadFittingDetails(id);
+            }
+        });
+    });
+
+    $(document).on('click', '.fit-tree-item-action-copy', function (evt) {
+        evt.stopPropagation();
+        const id = $(this).closest('.fit-tree-item').data('id');
+        $.ajax({
+            url: '/fitting/fittings/' + id + '/copy',
+            type: 'POST',
+            dataType: 'json',
+            data: {_token: window.fittingCsrf},
+            timeout: 15000,
+        }).done(function (newFit) {
+            loadFittingTree();
+            if (newFit && newFit.id) {
+                /* select the new copy so the user can immediately rename / edit */
+                setTimeout(() => selectFitting(newFit.id, newFit.name, ''), 200);
+            }
+        });
+    });
+
     /* Detail slot expand/collapse */
     $(document).on('click', '.fit-detail-slot-header', function () {
         const slot = $(this).closest('.fit-detail-slot');
@@ -181,6 +227,34 @@ function initializeFittingPage() {
     if (window.fittingManageMode) {
         initializeRequirementSelectors();
     }
+
+    /* Export-missing button — find the cached skill list for this panel,
+       look up the active character, build the plain-English plan text, open the modal. */
+    $(document).on('click', '.export-missing-btn', function () {
+        const exportId = $(this).closest('.training-time-summary').data('exportId');
+        const skills = exportId ? (ExportCache.map[exportId] || []) : [];
+        const characterId = $('#characterSpinner').val();
+        const character = FittingState.skillsPayload
+            ? (FittingState.skillsPayload.characters || {})[characterId]
+            : null;
+        const text = buildExportText(skills, character);
+        $('#exportMissingTextarea').val(text || (fitI18n('exportMissingEmpty') || ''));
+        $('#exportMissingModal').modal('show');
+    });
+
+    $(document).on('click', '#exportMissingCopyBtn', function () {
+        const ta = document.getElementById('exportMissingTextarea');
+        if (!ta) return;
+        ta.focus();
+        ta.select();
+        try {
+            document.execCommand('copy');
+            const btn = $(this);
+            const original = btn.html();
+            btn.html('<i class="fa fa-check"></i> ' + escapeHtml(fitI18n('exportCopyDone') || 'Copied'));
+            setTimeout(() => btn.html(original), 1200);
+        } catch (e) { /* ignore */ }
+    });
 }
 
 function loadFittingTree() {
@@ -213,14 +287,16 @@ function renderFitTree() {
 
         const items = group.fittings.map(function (fit) {
             const iconUrl = `https://images.evetech.net/types/${fit.typeID}/icon?size=32`;
-            const editBtn = window.fittingManageMode
-                ? `<button class="btn btn-xs btn-warning fit-tree-item-action-edit" title="${escapeHtml(fitI18n('editFittingTooltip'))}"><i class="fas fa-edit"></i></button>
+            const manageBtns = window.fittingManageMode
+                ? `<button class="btn btn-xs btn-outline-secondary fit-tree-item-action-rename" title="${escapeHtml(fitI18n('renameFittingTooltip'))}"><i class="fa fa-i-cursor"></i></button>
+                   <button class="btn btn-xs btn-outline-secondary fit-tree-item-action-copy" title="${escapeHtml(fitI18n('copyFittingTooltip'))}"><i class="fa fa-copy"></i></button>
+                   <button class="btn btn-xs btn-warning fit-tree-item-action-edit" title="${escapeHtml(fitI18n('editFittingTooltip'))}"><i class="fas fa-edit"></i></button>
                    <button class="btn btn-xs btn-danger fit-tree-item-action-delete" title="${escapeHtml(fitI18n('deleteFittingTooltip'))}"><i class="fa fa-trash"></i></button>`
                 : '';
             return `<div class="fit-tree-item" data-id="${fit.id}" data-name="${escapeHtml(fit.name)}" data-ship="${escapeHtml(fit.shipType)}">
                 <img class="fit-tree-item-icon" src="${iconUrl}" alt="">
                 <span class="fit-tree-item-name">${escapeHtml(fit.name)} <span class="fit-tree-item-ship">· ${escapeHtml(fit.shipType)}</span></span>
-                <span class="fit-tree-item-actions">${editBtn}</span>
+                <span class="fit-tree-item-actions">${manageBtns}</span>
             </div>`;
         }).join('');
 
@@ -399,6 +475,7 @@ function runGroupCheck(doctrineId) {
 
 function renderSkillCheck(result) {
     if (!result) return;
+    clearExportCache();
     $('#skills-box').show();
     const spinner = $('#characterSpinner');
     if (!spinner.find('option').length) {
@@ -436,6 +513,10 @@ function renderSingleSkillCheck(result) {
         renderTabBadge('advanced', 'not-set');
     } else {
         renderTabBadge('advanced', advMet ? 'passed' : 'failed');
+    }
+
+    if (typeof renderAttachedPlans === 'function') {
+        renderAttachedPlans(result.plans || []);
     }
 
     renderActiveSkillTab();
@@ -478,6 +559,9 @@ function renderTabBadge(tier, state) {
 
 function renderGroupSkillCheck(result) {
     $('#singleSkillView').hide();
+    /* Group check has no single fitting; clear the per-fitting attached-plans block
+       so we don't show stale cards from a previously-selected single fitting. */
+    $('#attachedPlansBlock').hide();
     const target = $('#groupSkillResults').show().empty();
     const characterId = $('#characterSpinner').val();
     const character = (result.characters || {})[characterId];
@@ -509,12 +593,22 @@ function renderGroupSkillCheck(result) {
             : (minMet ? (advancedSkills.length ? 'advanced' : 'minimum') : 'minimum');
         const visibleList = tierKey === 'advanced' ? advancedSkills : minimumSkills;
 
+        const planChips = (fitting.plans || []).map(p => {
+            const tierClass = p.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+            const viaTag = p.via === 'doctrine' ? '(grp)' : '';
+            return `<span class="plan-card-tier ${tierClass}" title="${escapeHtml(p.name)}">${escapeHtml(p.name)} ${viaTag}</span>`;
+        }).join(' ');
+        const plansLine = planChips
+            ? `<div class="attached-plan-card-items mb-2">${planChips}</div>`
+            : '';
+
         target.append(`<div class="card fit-card-flat mb-3 fit-fade-in">
             <div class="card-header skill-check-header">
                 <h6 class="mb-0">${headerTitle}</h6>
                 ${statusPillHtml(status, {large: false})}
             </div>
             <div class="card-body">
+                ${plansLine}
                 <div class="skill-check-tabs">
                     <button type="button" class="skill-check-tab group-tier-tab ${tierKey === 'minimum' ? 'is-active' : ''}" data-tier="minimum" data-fitting-id="${fitting.id}">${escapeHtml(fitI18n('tabEntry'))}</button>
                     <button type="button" class="skill-check-tab group-tier-tab ${tierKey === 'advanced' ? 'is-active' : ''}" data-tier="advanced" data-fitting-id="${fitting.id}">${escapeHtml(fitI18n('tabAdvanced'))}</button>
@@ -555,10 +649,74 @@ function skillsAllMet(skills, character) {
     return true;
 }
 
+/* Per-panel skill-list cache so the export button can recover the list it should iterate.
+   Cleared whenever we re-render the whole skill check, capped per render so memory stays bounded. */
+const ExportCache = {map: {}, nextId: 1};
+function stashExportSkills(skills) {
+    const id = 'ec' + (ExportCache.nextId++);
+    ExportCache.map[id] = skills;
+    return id;
+}
+function clearExportCache() {
+    ExportCache.map = {};
+}
+
 function renderSkillRequirementPanel(skills, character) {
     if (!skills || !skills.length) return '';
+    const summary = renderTrainingSummary(skills, character);
     const groups = groupSkillsByCategory(skills);
-    return groups.map(group => renderSkillGroup(group, character)).join('');
+    return summary + groups.map(group => renderSkillGroup(group, character)).join('');
+}
+
+function renderTrainingSummary(skills, character) {
+    if (!character) return '';
+    let totalPoints = 0;
+    let missingCount = 0;
+    for (const skill of skills) {
+        const cs = character.skill[skill.typeId] || {level: 0, rank: 1};
+        const cur = parseInt(cs.level || 0);
+        const req = parseInt(skill.level || 0);
+        if (cur >= req) continue;
+        const rank = parseInt(cs.rank || 1);
+        const need = rank * 250 * Math.pow(5.66, req - 1);
+        const have = cur > 0 ? rank * 250 * Math.pow(5.66, cur - 1) : 0;
+        totalPoints += (need - have);
+        missingCount++;
+    }
+
+    const exportId = stashExportSkills(skills);
+
+    if (missingCount === 0) {
+        return `<div class="training-time-summary" data-export-id="${exportId}">
+            <strong>${escapeHtml(fitI18n('trainingTimeTitle'))}:</strong> 0
+            <button type="button" class="btn btn-xs btn-outline-secondary export-missing-btn" disabled>
+                <i class="fa fa-download"></i> ${escapeHtml(fitI18n('exportMissingBtn'))}
+            </button>
+        </div>`;
+    }
+
+    const timeStr = formatTime(totalPoints) || '';
+    return `<div class="training-time-summary" data-export-id="${exportId}">
+        <strong>${escapeHtml(fitI18n('trainingTimeTitle'))}:</strong> ${escapeHtml(timeStr)} <span class="text-muted">(${missingCount})</span>
+        <button type="button" class="btn btn-xs btn-outline-secondary export-missing-btn">
+            <i class="fa fa-download"></i> ${escapeHtml(fitI18n('exportMissingBtn'))}
+        </button>
+    </div>`;
+}
+
+function buildExportText(skills, character) {
+    const lines = [];
+    if (!character) return '';
+    for (const skill of skills) {
+        const cs = character.skill[skill.typeId] || {level: 0};
+        const cur = parseInt(cs.level || 0);
+        const req = parseInt(skill.level || 0);
+        if (cur >= req) continue;
+        for (let lvl = cur + 1; lvl <= req; lvl++) {
+            lines.push(`${skill.typeName} ${lvl}`);
+        }
+    }
+    return lines.join('\n');
 }
 
 function groupSkillsByCategory(skills) {

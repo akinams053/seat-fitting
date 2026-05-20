@@ -175,5 +175,69 @@ Route::group([
             'uses' => 'FittingController@runReport',
             'middleware' => 'can:fitting.reportview',
         ]);
+
+        /* Auxiliary skill plans */
+        Route::get('/plans', [
+            'as' => 'cryptafitting::plans.list',
+            'uses' => 'FittingController@listPlans',
+            'middleware' => 'can:fitting.view',
+        ]);
+        Route::post('/plans/preview', [
+            'as' => 'cryptafitting::plans.preview',
+            'uses' => 'FittingController@previewPlan',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::post('/plans', [
+            'as' => 'cryptafitting::plans.create',
+            'uses' => 'FittingController@createPlan',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::get('/plans/{id}', [
+            'as' => 'cryptafitting::plans.get',
+            'uses' => 'FittingController@getPlan',
+            'middleware' => 'can:fitting.view',
+        ]);
+        Route::patch('/plans/{id}', [
+            'as' => 'cryptafitting::plans.update',
+            'uses' => 'FittingController@updatePlan',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::delete('/plans/{id}', [
+            'as' => 'cryptafitting::plans.delete',
+            'uses' => 'FittingController@deletePlan',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::post('/plans/{id}/fittings/{fittingId}', [
+            'as' => 'cryptafitting::plans.attachFitting',
+            'uses' => 'FittingController@attachPlanToFitting',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::delete('/plans/{id}/fittings/{fittingId}', [
+            'as' => 'cryptafitting::plans.detachFitting',
+            'uses' => 'FittingController@detachPlanFromFitting',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::post('/plans/{id}/doctrines/{doctrineId}', [
+            'as' => 'cryptafitting::plans.attachDoctrine',
+            'uses' => 'FittingController@attachPlanToDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::delete('/plans/{id}/doctrines/{doctrineId}', [
+            'as' => 'cryptafitting::plans.detachDoctrine',
+            'uses' => 'FittingController@detachPlanFromDoctrine',
+            'middleware' => 'can:fitting.create',
+        ]);
+
+        /* Fitting copy / rename */
+        Route::post('/fittings/{id}/copy', [
+            'as' => 'cryptafitting::copyFitting',
+            'uses' => 'FittingController@copyFitting',
+            'middleware' => 'can:fitting.create',
+        ]);
+        Route::patch('/fittings/{id}', [
+            'as' => 'cryptafitting::renameFitting',
+            'uses' => 'FittingController@renameFitting',
+            'middleware' => 'can:fitting.create',
+        ]);
     });
 });

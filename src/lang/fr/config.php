@@ -3,7 +3,7 @@
 return [
     'menu_title' => 'Contrôles de fittings',
     'menu_fitting' => 'Contrôle personnel',
-    'menu_fitting_manage' => 'Saisie de fitting',
+    'menu_fitting_manage' => 'Gestion des fits et compétences',
     'menu_doctrines' => 'Groupes de fittings',
     'menu_doctrine_report' => 'Contrôle de compétences corporation',
     'menu_fleet_review' => 'Revue de flotte',

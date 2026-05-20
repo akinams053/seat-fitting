@@ -25,6 +25,27 @@
     </div>
 </div>
 
+<div class="modal fade" tabindex="-1" role="dialog" id="exportMissingModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title">{{trans('fitting::fitting.export_missing_modal_title')}}</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <small class="text-muted d-block mb-1">{{trans('fitting::fitting.export_missing_modal_hint')}}</small>
+                <textarea id="exportMissingTextarea" class="form-control export-missing-textarea" rows="14" readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" id="exportMissingCopyBtn">
+                    <i class="fa fa-copy"></i> {{trans('fitting::fitting.export_copy_btn')}}
+                </button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{trans('fitting::global.cancel_btn')}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @if($manage ?? false)
     <div class="card fit-card-flat" id="requirements-box" style="display:none;">
         <div class="card-header">

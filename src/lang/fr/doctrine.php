@@ -29,7 +29,12 @@ return [
     'workspace_groups_empty_hint' => 'Aucun groupe de fittings. Cliquez sur « Nouveau groupe » pour en créer un.',
     'workspace_rename_btn' => 'Renommer',
     'workspace_remove_fit_btn' => 'Retirer du groupe',
-    'workspace_hint' => 'Astuce : faites glisser un fitting de droite vers un groupe à gauche. Un même fitting peut appartenir à plusieurs groupes.',
+    'workspace_hint' => 'Astuce : faites glisser un fitting de droite vers un groupe à gauche. Un même fitting peut appartenir à plusieurs groupes. Les plans déposés sur un groupe s\'appliquent à tous ses fits.',
+    'workspace_plan_pool_title' => 'Plans de compétences auxiliaires',
+    'workspace_plan_pool_hint' => 'Déposez un plan sur un groupe ci-dessous pour augmenter les exigences de chaque fit du groupe.',
+    'workspace_plan_pool_empty' => 'Aucun plan disponible. Créez-en un dans « Gestion des fits et compétences ».',
+    'workspace_group_plans_empty' => 'Déposer un plan ici',
+    'workspace_remove_plan_btn' => 'Retirer le plan du groupe',
 
     'report_page_title' => 'Contrôle de compétences corporation',
 

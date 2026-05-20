@@ -3,7 +3,7 @@
 return [
     'menu_title' => 'Fitting Checks',
     'menu_fitting' => 'Personal Fitting Check',
-    'menu_fitting_manage' => 'Fitting Entry',
+    'menu_fitting_manage' => 'Fitting & Skill Management',
     'menu_doctrines' => 'Fitting Groups',
     'menu_doctrine_report' => 'Corporation Skill Check',
     'menu_fleet_review' => 'Fleet Review',

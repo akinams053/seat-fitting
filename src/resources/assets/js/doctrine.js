@@ -11,6 +11,7 @@ function dI18n(key) {
 const DoctrineState = {
     groups: [],
     pool: [],
+    planPool: [],
     sortables: [],
 };
 
@@ -73,6 +74,20 @@ function initializeDoctrineWorkspace() {
             timeout: 10000,
         }).done(loadDoctrineWorkspace);
     });
+
+    $(document).on('click', '.plan-card-remove', function (evt) {
+        evt.stopPropagation();
+        const groupId = $(this).closest('.doctrine-group').data('groupId');
+        const planId = $(this).closest('.plan-card-attached').data('planId');
+        if (!groupId || !planId) return;
+        $.ajax({
+            url: '/fitting/plans/' + planId + '/doctrines/' + groupId,
+            type: 'POST',
+            data: {_token: window.doctrineCsrf, _method: 'DELETE'},
+            dataType: 'json',
+            timeout: 10000,
+        }).done(loadDoctrineWorkspace);
+    });
 }
 
 function loadDoctrineWorkspace() {
@@ -84,8 +99,10 @@ function loadDoctrineWorkspace() {
     }).done(function (data) {
         DoctrineState.groups = data.groups || [];
         DoctrineState.pool = data.pool || [];
+        DoctrineState.planPool = data.planPool || [];
         renderGroups();
         renderPool();
+        renderPlanPool();
         wireSortables();
     });
 }
@@ -108,6 +125,9 @@ function renderGroups() {
         const items = group.fittings.map(g => fitCardHtml(g, true)).join('');
         const emptyHint = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupEmptyHint'))}</div>`;
 
+        const plans = (group.plans || []).map(p => planAttachedCardHtml(p)).join('');
+        const plansEmpty = `<div class="doctrine-group-empty">${dEscape(dI18n('workspaceGroupPlansEmpty'))}</div>`;
+
         container.append(`<div class="doctrine-group" data-group-id="${group.id}">
             <div class="doctrine-group-header">
                 <span class="doctrine-group-header-title">${dEscape(group.name)}</span>
@@ -116,6 +136,9 @@ function renderGroups() {
             </div>
             <div class="doctrine-group-body" data-group-id="${group.id}">
                 ${items || emptyHint}
+            </div>
+            <div class="doctrine-group-plans-body" data-group-id="${group.id}">
+                ${plans || plansEmpty}
             </div>
         </div>`);
     }
@@ -135,6 +158,20 @@ function renderPool() {
     }
 }
 
+function renderPlanPool() {
+    const pool = $('#doctrinePlanPool');
+    pool.empty();
+
+    if (!DoctrineState.planPool.length) {
+        pool.append(`<div class="fit-tree-empty">${dEscape(dI18n('workspacePlanPoolEmpty'))}</div>`);
+        return;
+    }
+
+    for (const plan of DoctrineState.planPool) {
+        pool.append(planPoolCardHtml(plan));
+    }
+}
+
 function fitCardHtml(fit, inGroup) {
     const iconUrl = `https://images.evetech.net/types/${fit.typeID}/icon?size=32`;
     const removeBtn = inGroup
@@ -150,6 +187,26 @@ function fitCardHtml(fit, inGroup) {
     </div>`;
 }
 
+function planPoolCardHtml(plan) {
+    const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
+    const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+    return `<div class="plan-pool-card" data-plan-id="${plan.id}" data-tier="${plan.tier}">
+        <span class="plan-card-grip"><i class="fa fa-grip-vertical"></i></span>
+        <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
+        <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
+    </div>`;
+}
+
+function planAttachedCardHtml(plan) {
+    const tierLabel = plan.tier === 'advanced' ? dI18n('tierAdvanced') : dI18n('tierEntry');
+    const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
+    return `<div class="plan-card-attached" data-plan-id="${plan.id}">
+        <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
+        <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
+        <button type="button" class="plan-card-remove" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>
+    </div>`;
+}
+
 function wireSortables() {
     /* Destroy old sortable instances */
     for (const s of DoctrineState.sortables) {
@@ -157,26 +214,36 @@ function wireSortables() {
     }
     DoctrineState.sortables = [];
 
-    /* Pool — items can be cloned/pulled into groups; new items cannot be dropped here. */
+    if (!window.doctrineI18n.canCreate) return;
+
+    /* Fittings pool — items can be cloned/pulled into group fittings bodies. */
     const pool = document.getElementById('doctrinePool');
-    if (pool && window.doctrineI18n.canCreate) {
+    if (pool) {
         DoctrineState.sortables.push(new Sortable(pool, {
             group: {name: 'fittings', pull: 'clone', put: false},
             sort: false,
             animation: 180,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
-            onClone: function (evt) {
-                /* keep DOM card visible in the pool: replace the dragged ghost with its clone */
-                evt.item.style.display = '';
-            },
+            onClone: function (evt) { evt.item.style.display = ''; },
         }));
     }
 
-    /* Each group body accepts drops from the pool, and rejects duplicates. */
+    /* Plans pool — items can be cloned/pulled into group plans bodies. */
+    const planPool = document.getElementById('doctrinePlanPool');
+    if (planPool) {
+        DoctrineState.sortables.push(new Sortable(planPool, {
+            group: {name: 'doctrine-plans', pull: 'clone', put: false},
+            sort: false,
+            animation: 180,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onClone: function (evt) { evt.item.style.display = ''; },
+        }));
+    }
+
     $('.doctrine-group-body').each(function () {
         const el = this;
-        if (!window.doctrineI18n.canCreate) return;
         DoctrineState.sortables.push(new Sortable(el, {
             group: {name: 'fittings', pull: false, put: true},
             animation: 180,
@@ -189,7 +256,6 @@ function wireSortables() {
                     evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
                     return;
                 }
-                /* Duplicate guard: if the group already contains this fitting, remove the dropped clone. */
                 const existing = $(el).find(`.fit-card[data-fitting-id="${fittingId}"]`);
                 if (existing.length > 1) {
                     evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
@@ -198,6 +264,38 @@ function wireSortables() {
 
                 $.ajax({
                     url: '/fitting/doctrine/' + groupId + '/fittings/' + fittingId,
+                    type: 'POST',
+                    data: {_token: window.doctrineCsrf},
+                    dataType: 'json',
+                    timeout: 10000,
+                }).done(loadDoctrineWorkspace).fail(loadDoctrineWorkspace);
+            },
+        }));
+    });
+
+    $('.doctrine-group-plans-body').each(function () {
+        const el = this;
+        DoctrineState.sortables.push(new Sortable(el, {
+            group: {name: 'doctrine-plans', pull: false, put: true},
+            animation: 180,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onAdd: function (evt) {
+                const groupId = $(el).data('groupId');
+                const planId = $(evt.item).data('planId');
+                if (!groupId || !planId) {
+                    evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
+                    return;
+                }
+                /* Dedup: if this plan is already attached, drop the clone. */
+                const existing = $(el).find(`.plan-card-attached[data-plan-id="${planId}"]`);
+                if (existing.length > 0) {
+                    evt.item.parentNode && evt.item.parentNode.removeChild(evt.item);
+                    return;
+                }
+
+                $.ajax({
+                    url: '/fitting/plans/' + planId + '/doctrines/' + groupId,
                     type: 'POST',
                     data: {_token: window.doctrineCsrf},
                     dataType: 'json',

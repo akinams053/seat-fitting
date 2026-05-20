@@ -34,4 +34,6 @@
             </div>
         </div>
     @endforeach
+
+    @include('fitting::includes.plan-attached-block')
 </div>

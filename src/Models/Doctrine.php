@@ -18,6 +18,16 @@ class Doctrine extends Model
         return $this->belongsToMany(Fitting::class, 'crypta_tech_seat_doctrine_fitting', 'doctrine_id', 'fitting_id');
     }
 
+    public function skillPlans()
+    {
+        return $this->belongsToMany(
+            FittingSkillPlan::class,
+            'crypta_tech_seat_fitting_skill_plan_attachments',
+            'attachable_id',
+            'plan_id'
+        )->wherePivot('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE);
+    }
+
     // Not yet used
     public function roles()
     {

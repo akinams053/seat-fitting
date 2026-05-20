@@ -3,7 +3,7 @@
 return [
     'menu_title' => '配装检查',
     'menu_fitting' => '个人配装检查',
-    'menu_fitting_manage' => '配装录入',
+    'menu_fitting_manage' => '配装及技能管理',
     'menu_doctrines' => '配装分组',
     'menu_doctrine_report' => '军团技能检查',
     'menu_fleet_review' => '舰队审查',

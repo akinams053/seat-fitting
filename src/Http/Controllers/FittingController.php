@@ -6,13 +6,19 @@ use CryptaTech\Seat\Fitting\Events\DoctrineUpdated;
 use CryptaTech\Seat\Fitting\Events\FittingUpdated;
 use CryptaTech\Seat\Fitting\Models\Doctrine;
 use CryptaTech\Seat\Fitting\Models\Fitting;
+use CryptaTech\Seat\Fitting\Models\FittingItem;
+use CryptaTech\Seat\Fitting\Models\FittingSkillPlan;
+use CryptaTech\Seat\Fitting\Models\FittingSkillPlanAttachment;
+use CryptaTech\Seat\Fitting\Models\FittingSkillPlanItem;
 use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
 use CryptaTech\Seat\Fitting\Services\CorporationSkillReportService;
 use CryptaTech\Seat\Fitting\Services\PersonalSkillCheckService;
+use CryptaTech\Seat\Fitting\Services\SkillPlanParser;
 use CryptaTech\Seat\Fitting\Services\SkillRequirementSyncService;
 use CryptaTech\Seat\Fitting\Validation\DoctrineValidation;
 use CryptaTech\Seat\Fitting\Validation\FittingValidation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Character\CharacterAffiliation;
@@ -27,6 +33,7 @@ class FittingController extends Controller
         private PersonalSkillCheckService $personalSkillCheck,
         private SkillRequirementSyncService $skillRequirementSync,
         private CorporationSkillReportService $corporationSkillReport,
+        private SkillPlanParser $skillPlanParser,
     ) {}
 
     public function getDoctrineEdit($doctrine_id)
@@ -107,14 +114,26 @@ class FittingController extends Controller
 
     public function delDoctrineById($id)
     {
-        Doctrine::destroy($id);
+        DB::transaction(function () use ($id) {
+            /* Polymorphic attachments have no DB-level FK back to doctrine — clean manually
+               to avoid orphan rows that would still be returned by skillPlans()/attachments queries. */
+            FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
+                ->where('attachable_id', (int) $id)
+                ->delete();
+            Doctrine::destroy($id);
+        });
 
         return 'Success';
     }
 
     public function deleteFittingById($id)
     {
-        Fitting::destroy($id);
+        DB::transaction(function () use ($id) {
+            FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+                ->where('attachable_id', (int) $id)
+                ->delete();
+            Fitting::destroy($id);
+        });
 
         return 'Success';
     }
@@ -491,9 +510,21 @@ class FittingController extends Controller
             'typeID' => $f->ship_type_id,
         ])->values();
 
+        $allPlans = FittingSkillPlan::orderBy('name')->get();
+        $planPool = $allPlans->map(fn (FittingSkillPlan $p) => [
+            'id' => $p->id,
+            'name' => $p->name,
+            'tier' => $p->tier,
+        ])->values();
+
+        $planAttachmentsByDoctrineId = FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
+            ->get()
+            ->groupBy('attachable_id');
+        $plansById = $allPlans->keyBy('id');
+
         $doctrines = Doctrine::with('fittings:fitting_id')->orderBy('name')->get();
         $byId = $fittings->keyBy('fitting_id');
-        $groups = $doctrines->map(function (Doctrine $d) use ($byId) {
+        $groups = $doctrines->map(function (Doctrine $d) use ($byId, $planAttachmentsByDoctrineId, $plansById) {
             $items = $d->fittings->map(function ($pivotFit) use ($byId) {
                 $f = $byId->get($pivotFit->fitting_id);
                 if (! $f) {
@@ -508,16 +539,26 @@ class FittingController extends Controller
                 ];
             })->filter()->values();
 
+            $attachedPlanIds = ($planAttachmentsByDoctrineId->get($d->id) ?? collect())
+                ->pluck('plan_id');
+            $plans = $attachedPlanIds->map(function ($pid) use ($plansById) {
+                $p = $plansById->get($pid);
+
+                return $p ? ['id' => $p->id, 'name' => $p->name, 'tier' => $p->tier] : null;
+            })->filter()->values();
+
             return [
                 'id' => $d->id,
                 'name' => $d->name,
                 'fittings' => $items,
+                'plans' => $plans,
             ];
         })->values();
 
         return response()->json([
             'groups' => $groups,
             'pool' => $pool,
+            'planPool' => $planPool,
         ]);
     }
 
@@ -558,8 +599,13 @@ class FittingController extends Controller
     public function deleteDoctrine($id)
     {
         $doctrine = Doctrine::findOrFail($id);
-        $doctrine->fittings()->detach();
-        $doctrine->delete();
+        DB::transaction(function () use ($doctrine) {
+            FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
+                ->where('attachable_id', $doctrine->id)
+                ->delete();
+            $doctrine->fittings()->detach();
+            $doctrine->delete();
+        });
 
         return response()->json(['ok' => true]);
     }
@@ -649,5 +695,313 @@ class FittingController extends Controller
         abort_if($corporation === null, 500, trans('fitting::doctrine.report_corporation_not_found'));
 
         return ['alliance' => $alliance, 'corporation' => $corporation];
+    }
+
+    /* ====================================================================
+     *  Auxiliary skill plans
+     * ==================================================================== */
+
+    public function listPlans()
+    {
+        $plans = FittingSkillPlan::with('items.skill')->orderBy('name')->get();
+
+        $attachmentsByPlan = FittingSkillPlanAttachment::all()
+            ->groupBy('plan_id')
+            ->map(function ($rows) {
+                $byKind = $rows->groupBy('attachable_type');
+
+                return [
+                    'fittings' => $byKind->get(FittingSkillPlan::ATTACHABLE_FITTING, collect())
+                        ->pluck('attachable_id')->map(fn ($id) => (int) $id)->values()->all(),
+                    'doctrines' => $byKind->get(FittingSkillPlan::ATTACHABLE_DOCTRINE, collect())
+                        ->pluck('attachable_id')->map(fn ($id) => (int) $id)->values()->all(),
+                ];
+            });
+
+        return response()->json($plans->map(function (FittingSkillPlan $plan) use ($attachmentsByPlan) {
+            $attachments = $attachmentsByPlan->get($plan->id, ['fittings' => [], 'doctrines' => []]);
+
+            return $this->planResponseShape($plan, $attachments);
+        })->values());
+    }
+
+    public function previewPlan(Request $request)
+    {
+        $data = $request->validate([
+            'raw' => 'required|string|max:65535',
+        ]);
+
+        $parsed = $this->skillPlanParser->parse($data['raw']);
+
+        return response()->json([
+            'items' => $parsed['items'],
+            'unmatched' => $parsed['unmatched'],
+        ]);
+    }
+
+    public function createPlan(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:191',
+            'tier' => 'required|in:minimum,advanced',
+            'description' => 'nullable|string|max:1000',
+            'raw' => 'required|string|max:65535',
+        ]);
+
+        $parsed = $this->skillPlanParser->parse($data['raw']);
+        abort_if(empty($parsed['items']), 422, 'Skill plan contains no recognisable skills.');
+
+        $plan = DB::transaction(function () use ($data, $parsed) {
+            $plan = FittingSkillPlan::create([
+                'name' => $data['name'],
+                'tier' => $data['tier'],
+                'description' => $data['description'] ?? null,
+            ]);
+
+            foreach ($parsed['items'] as $item) {
+                FittingSkillPlanItem::create([
+                    'plan_id' => $plan->id,
+                    'skill_type_id' => $item['type_id'],
+                    'level' => $item['level'],
+                ]);
+            }
+
+            return $plan;
+        });
+
+        return response()->json($this->planResponseShape(
+            $plan->load('items.skill'),
+            ['fittings' => [], 'doctrines' => []],
+            ['unmatched' => $parsed['unmatched']]
+        ));
+    }
+
+    public function getPlan($id)
+    {
+        $plan = FittingSkillPlan::with('items.skill')->findOrFail($id);
+        $attachments = $this->planAttachmentsArray($plan->id);
+
+        return response()->json($this->planResponseShape($plan, $attachments));
+    }
+
+    public function updatePlan(Request $request, $id)
+    {
+        $data = $request->validate([
+            'name' => 'sometimes|required|string|max:191',
+            'tier' => 'sometimes|required|in:minimum,advanced',
+            'description' => 'nullable|string|max:1000',
+            'raw' => 'sometimes|nullable|string|max:65535',
+        ]);
+
+        $plan = FittingSkillPlan::findOrFail($id);
+        $unmatched = [];
+
+        DB::transaction(function () use ($plan, $data, &$unmatched) {
+            if (array_key_exists('name', $data)) {
+                $plan->name = $data['name'];
+            }
+            if (array_key_exists('tier', $data)) {
+                $plan->tier = $data['tier'];
+            }
+            if (array_key_exists('description', $data)) {
+                $plan->description = $data['description'];
+            }
+            $plan->save();
+
+            if (! empty($data['raw'])) {
+                $parsed = $this->skillPlanParser->parse($data['raw']);
+                abort_if(empty($parsed['items']), 422, 'Skill plan contains no recognisable skills.');
+                $unmatched = $parsed['unmatched'];
+
+                FittingSkillPlanItem::where('plan_id', $plan->id)->delete();
+                foreach ($parsed['items'] as $item) {
+                    FittingSkillPlanItem::create([
+                        'plan_id' => $plan->id,
+                        'skill_type_id' => $item['type_id'],
+                        'level' => $item['level'],
+                    ]);
+                }
+            }
+        });
+
+        $plan->load('items.skill');
+        $attachments = $this->planAttachmentsArray($plan->id);
+
+        return response()->json($this->planResponseShape($plan, $attachments, ['unmatched' => $unmatched]));
+    }
+
+    public function deletePlan($id)
+    {
+        $plan = FittingSkillPlan::findOrFail($id);
+        $plan->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function attachPlanToFitting($id, $fittingId)
+    {
+        FittingSkillPlan::findOrFail($id);
+        Fitting::findOrFail($fittingId);
+
+        FittingSkillPlanAttachment::firstOrCreate([
+            'plan_id' => (int) $id,
+            'attachable_type' => FittingSkillPlan::ATTACHABLE_FITTING,
+            'attachable_id' => (int) $fittingId,
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function detachPlanFromFitting($id, $fittingId)
+    {
+        FittingSkillPlanAttachment::where('plan_id', (int) $id)
+            ->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+            ->where('attachable_id', (int) $fittingId)
+            ->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function attachPlanToDoctrine($id, $doctrineId)
+    {
+        FittingSkillPlan::findOrFail($id);
+        Doctrine::findOrFail($doctrineId);
+
+        FittingSkillPlanAttachment::firstOrCreate([
+            'plan_id' => (int) $id,
+            'attachable_type' => FittingSkillPlan::ATTACHABLE_DOCTRINE,
+            'attachable_id' => (int) $doctrineId,
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function detachPlanFromDoctrine($id, $doctrineId)
+    {
+        FittingSkillPlanAttachment::where('plan_id', (int) $id)
+            ->where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
+            ->where('attachable_id', (int) $doctrineId)
+            ->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function planAttachmentsArray(int $planId): array
+    {
+        $rows = FittingSkillPlanAttachment::where('plan_id', $planId)->get();
+
+        return [
+            'fittings' => $rows->where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+                ->pluck('attachable_id')->map(fn ($id) => (int) $id)->values()->all(),
+            'doctrines' => $rows->where('attachable_type', FittingSkillPlan::ATTACHABLE_DOCTRINE)
+                ->pluck('attachable_id')->map(fn ($id) => (int) $id)->values()->all(),
+        ];
+    }
+
+    private function planResponseShape(FittingSkillPlan $plan, array $attachments, array $extra = []): array
+    {
+        return array_merge([
+            'id' => $plan->id,
+            'name' => $plan->name,
+            'tier' => $plan->tier,
+            'description' => $plan->description,
+            'items' => $plan->items->map(fn (FittingSkillPlanItem $item) => [
+                'type_id' => (int) $item->skill_type_id,
+                'type_name' => $item->skill->typeName ?? '',
+                'level' => (int) $item->level,
+            ])->values()->all(),
+            'attachments' => $attachments,
+        ], $extra);
+    }
+
+    /* ====================================================================
+     *  Fitting copy + rename
+     * ==================================================================== */
+
+    public function copyFitting($id)
+    {
+        $source = Fitting::with(['items', 'skillRequirements'])->findOrFail($id);
+
+        $copy = DB::transaction(function () use ($source) {
+            $copy = new Fitting;
+            $copy->name = $this->buildCopyName($source->name);
+            $copy->description = $source->description;
+            $copy->ship_type_id = $source->ship_type_id;
+            $copy->save();
+
+            foreach ($source->items as $item) {
+                $newItem = new FittingItem;
+                $newItem->fitting_id = $copy->fitting_id;
+                $newItem->type_id = $item->type_id;
+                $newItem->quantity = $item->quantity;
+                $newItem->flag = $item->flag;
+                $newItem->save();
+            }
+
+            foreach ($source->skillRequirements as $req) {
+                FittingSkillRequirement::create([
+                    'fitting_id' => $copy->fitting_id,
+                    'skill_type_id' => $req->skill_type_id,
+                    'tier' => $req->tier,
+                    'level' => $req->level,
+                    'source' => $req->source,
+                    'is_active' => $req->is_active,
+                    'notes' => $req->notes,
+                ]);
+            }
+
+            $directPlans = FittingSkillPlanAttachment::where('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING)
+                ->where('attachable_id', $source->fitting_id)
+                ->pluck('plan_id');
+
+            foreach ($directPlans as $planId) {
+                FittingSkillPlanAttachment::create([
+                    'plan_id' => $planId,
+                    'attachable_type' => FittingSkillPlan::ATTACHABLE_FITTING,
+                    'attachable_id' => $copy->fitting_id,
+                ]);
+            }
+
+            return $copy;
+        });
+
+        FittingUpdated::dispatch($copy);
+
+        return response()->json([
+            'id' => $copy->fitting_id,
+            'name' => $copy->name,
+            'ship_type_id' => $copy->ship_type_id,
+        ]);
+    }
+
+    public function renameFitting(Request $request, $id)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:191',
+        ]);
+
+        $fitting = Fitting::findOrFail($id);
+        $fitting->name = $data['name'];
+        $fitting->save();
+
+        FittingUpdated::dispatch($fitting);
+
+        return response()->json([
+            'id' => $fitting->fitting_id,
+            'name' => $fitting->name,
+        ]);
+    }
+
+    private function buildCopyName(string $base): string
+    {
+        $suffix = ' ('.trans('fitting::fitting.copy_suffix').')';
+        $candidate = $base.$suffix;
+        $n = 2;
+        while (Fitting::where('name', $candidate)->exists()) {
+            $candidate = $base.$suffix.' '.$n;
+            $n++;
+        }
+
+        return $candidate;
     }
 }

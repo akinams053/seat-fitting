@@ -29,7 +29,12 @@ return [
     'workspace_groups_empty_hint' => '暂无配装分组，点击右上角"新建分组"创建一个',
     'workspace_rename_btn' => '重命名',
     'workspace_remove_fit_btn' => '从分组移除',
-    'workspace_hint' => '提示：把右侧配装拖入左侧分组以加入；同一配装可放入多个分组。',
+    'workspace_hint' => '提示：把右侧配装拖入左侧分组以加入；同一配装可放入多个分组。把方案拖入分组，会对该分组内所有配装按各档要求叠加。',
+    'workspace_plan_pool_title' => '辅助技能方案',
+    'workspace_plan_pool_hint' => '把方案拖入下方分组，会逐档抬高该分组内每个配装的要求。',
+    'workspace_plan_pool_empty' => '暂无方案。请在「配装及技能管理」页新建。',
+    'workspace_group_plans_empty' => '拖入方案到此',
+    'workspace_remove_plan_btn' => '从分组移除方案',
 
     'report_page_title' => '军团技能检查',
 

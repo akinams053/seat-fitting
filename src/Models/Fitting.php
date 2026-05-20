@@ -116,6 +116,21 @@ class Fitting extends Model
             ->where('tier', FittingSkillRequirement::TIER_ADVANCED);
     }
 
+    public function skillPlans()
+    {
+        return $this->belongsToMany(
+            FittingSkillPlan::class,
+            'crypta_tech_seat_fitting_skill_plan_attachments',
+            'attachable_id',
+            'plan_id'
+        )->wherePivot('attachable_type', FittingSkillPlan::ATTACHABLE_FITTING);
+    }
+
+    public function doctrines()
+    {
+        return $this->belongsToMany(Doctrine::class, 'crypta_tech_seat_doctrine_fitting', 'fitting_id', 'doctrine_id');
+    }
+
     /**
      * @return \Illuminate\Support\Collection
      */
