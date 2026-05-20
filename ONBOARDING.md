@@ -298,6 +298,8 @@ scripts/ssh-seat 'cd /var/www/seat && php artisan migrate:status | grep fitting'
 
 如果生产仍装的是上游 `cryptatech/seat-fitting`，要先评估替换路径和数据保留。不要直接删除生产 vendor 或跑 composer remove，除非用户明确确认。
 
+**生产服必须保留权限限制**：生产 `.env` 不要设置 `FITTING_BYPASS_PERMISSIONS`，或显式设为 `false`。这个开关只用于测试服。详见 §10。
+
 ---
 
 ## 9. 操作纪律
@@ -308,3 +310,52 @@ scripts/ssh-seat 'cd /var/www/seat && php artisan migrate:status | grep fitting'
 - 本机没有 PHP；PHP lint 要在测试服或 SeAT 宿主跑。
 - 测试服可以自由验证；生产写操作必须确认。
 - 当前 UI 语义以用户最新反馈为准：具体配装详情在左侧检查卡片下面；技能名不机翻。
+
+---
+
+## 10. 权限旁路开关（FITTING_BYPASS_PERMISSIONS）
+
+`v1.2.5` 起插件支持环境变量 `FITTING_BYPASS_PERMISSIONS`。
+
+| 值 | 行为 |
+|---|---|
+| `true` | 服务提供者注册 `Gate::before` 钩子，所有 `fitting.*` 权限直接放行。任何登录 SeAT 的用户都能访问个人配装检查 / 配装录入 / 配装分组 / 军团技能检查 |
+| `false`（默认） | 走 SeAT 标准角色权限，未配权限的用户被路由层 `can:fitting.*` middleware 拦截 |
+
+实现路径：`src/Config/fitting.config.php` 暴露 `bypass_permissions`；`FittingServiceProvider::registerPermissionBypass()` 在 boot 时检查并注册 `Gate::before`。
+
+### 测试服（`scripts/ssh-seat -t test` / `ylxh.de`）
+
+**当前状态：开放**。`/var/www/seat/.env` 应包含：
+
+```
+FITTING_BYPASS_PERMISSIONS=true
+```
+
+切换或新部署后必须：
+
+```bash
+scripts/ssh-seat -t test 'cd /var/www/seat && sudo -u www-data php artisan config:clear'
+```
+
+否则 Laravel 的 config cache 会让新值不生效。
+
+### 生产服（`scripts/ssh-seat` / 默认 `.creds`）
+
+**必须保持关闭**。生产 `.env` 不要写 `FITTING_BYPASS_PERMISSIONS`，或者显式：
+
+```
+FITTING_BYPASS_PERMISSIONS=false
+```
+
+部署或升级到 v1.2.5+ 后，验证一次：
+
+```bash
+scripts/ssh-seat 'cd /var/www/seat && grep FITTING_BYPASS_PERMISSIONS .env || echo "(unset = safe default)"'
+```
+
+输出应该是 `(unset = safe default)` 或 `FITTING_BYPASS_PERMISSIONS=false`。如果看到 `=true` 立即提醒用户并询问是否要改。
+
+### 为什么这个开关存在
+
+测试服上还没给每个测试账户加 SeAT 角色，又希望军团成员能直接打开 UI 走查。生产服角色配置齐全，必须强制按权限放行避免越权查看其他人配装/技能。这是单点 staging-only escape hatch，**不要**靠它做生产场景的"允许所有军团成员看"——那是 SeAT 角色配置的事。

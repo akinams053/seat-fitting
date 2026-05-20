@@ -3,6 +3,7 @@
 namespace CryptaTech\Seat\Fitting;
 
 use CryptaTech\Seat\Fitting\Commands\UpgradeFits;
+use Illuminate\Support\Facades\Gate;
 use Seat\Services\AbstractSeatPlugin;
 
 class FittingServiceProvider extends AbstractSeatPlugin
@@ -24,6 +25,28 @@ class FittingServiceProvider extends AbstractSeatPlugin
         $this->addMigrations();
 
         $this->registerSdeTables(['dgmAttributeTypes', 'dgmTypeAttributes', 'dgmEffects', 'dgmTypeEffects', 'invFlags']); // Make sure we have sufficient dogma
+
+        $this->registerPermissionBypass();
+    }
+
+    /**
+     * When config('fitting.config.bypass_permissions') is true, every fitting.* gate ability
+     * resolves to allowed regardless of the user's roles. This is the staging-server escape
+     * hatch — production must leave FITTING_BYPASS_PERMISSIONS unset (or false).
+     */
+    private function registerPermissionBypass(): void
+    {
+        if (! config('fitting.config.bypass_permissions')) {
+            return;
+        }
+
+        Gate::before(function ($user, $ability) {
+            if (is_string($ability) && str_starts_with($ability, 'fitting.')) {
+                return true;
+            }
+
+            return null;
+        });
     }
 
     private function addPublications(): void

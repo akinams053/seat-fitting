@@ -730,13 +730,21 @@
     width: 100% !important;
 }
 
-/* ×N counter inside a status pill (user aggregation row) */
+/* ×N counter chip nested inside a status pill (user aggregation row).
+   Rendered as an inset darker badge so the alt count reads at a glance even
+   from across a large report table. */
 .status-pill .status-pill-count {
-    margin-left: 5px;
-    opacity: 0.75;
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1.45;
 }
 
 /* User-row caret rotation when expanded */
