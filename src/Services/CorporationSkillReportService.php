@@ -149,7 +149,12 @@ class CorporationSkillReportService
     private function aggregateByUser(Collection $characterSnapshots, Collection $fittings, array $charsById): array
     {
         $characterIds = $characterSnapshots->keys()->all();
-        $tokens = RefreshToken::whereIn('character_id', $characterIds)
+        /* withTrashed: SeAT soft-deletes RefreshToken when an SSO authorisation expires or scopes
+           shrink. The user → character link is still meaningful for aggregation even though the
+           token can no longer refresh — the cached CharacterSkill snapshot is what we read here,
+           not live API data. Without withTrashed every once-registered-but-now-expired character
+           gets treated as an orphan, which on a real corp inflates the user count ~10×. */
+        $tokens = RefreshToken::withTrashed()->whereIn('character_id', $characterIds)
             ->select('character_id', 'user_id')
             ->get()
             ->keyBy('character_id');
