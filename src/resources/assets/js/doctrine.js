@@ -245,9 +245,9 @@ function planPoolCardHtml(plan) {
              <button type="button" class="btn btn-xs btn-link text-danger plan-pool-card-delete" title="${dEscape(dI18n('planDeleteTooltip'))}"><i class="fa fa-trash"></i></button>
            </span>`
         : '';
-    return `<div class="plan-pool-card" data-plan-id="${plan.id}" data-tier="${plan.tier}" style="border-left-color: ${accent};">
+    return `<div class="plan-pool-card" data-plan-id="${plan.id}" data-tier="${plan.tier}" style="${planAccentStyle(plan.id)}">
         <span class="plan-card-grip"><i class="fa fa-grip-vertical"></i></span>
-        <span class="plan-accent-dot" style="background:${accent};"></span>
+        <span class="plan-accent-dot" style="background:${accent.dot};"></span>
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
         ${actions}
@@ -261,8 +261,8 @@ function planAttachedCardHtml(plan, scope) {
     const tierClass = plan.tier === 'advanced' ? 'plan-tier-advanced' : 'plan-tier-minimum';
     const accent = planAccentColor(plan.id);
     const removeClass = scope === 'fit' ? 'fit-plan-remove' : 'group-plan-remove';
-    return `<div class="plan-card-attached" data-plan-id="${plan.id}" style="border-left-color: ${accent};">
-        <span class="plan-accent-dot" style="background:${accent};"></span>
+    return `<div class="plan-card-attached" data-plan-id="${plan.id}" style="${planAccentStyle(plan.id)}">
+        <span class="plan-accent-dot" style="background:${accent.dot};"></span>
         <span class="plan-pool-card-name">${dEscape(plan.name)}</span>
         <span class="plan-card-tier ${tierClass}">${dEscape(tierLabel)}</span>
         <button type="button" class="plan-card-remove ${removeClass}" title="${dEscape(dI18n('workspaceRemovePlanBtn'))}"><i class="fa fa-times"></i></button>

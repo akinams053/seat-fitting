@@ -47,7 +47,8 @@ return [
     'report_corporation_placeholder' => '选择军团',
 
     'report_doctrine_label' => '配装分组',
-    'report_fitting_label' => '单个配装',
+    'report_fitting_label' => '配装（可选筛选）',
+    'report_fitting_all' => '— 全部配装 —',
     'report_target_label' => '检查对象',
     'report_target_doctrine' => '配装分组',
     'report_target_fitting' => '单个配装',

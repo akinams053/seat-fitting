@@ -7,7 +7,6 @@ use CryptaTech\Seat\Fitting\Models\Fitting;
 use CryptaTech\Seat\Fitting\Models\FittingSkillPlan;
 use CryptaTech\Seat\Fitting\Models\FittingSkillPlanAttachment;
 use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
-use Illuminate\Support\Facades\DB;
 use Seat\Eveapi\Models\Sde\InvType;
 
 class PersonalSkillCheckService
@@ -17,13 +16,15 @@ class PersonalSkillCheckService
         private CharacterSkillSnapshotService $characters,
     ) {}
 
-    public function checkForCurrentUser(Fitting $fitting): array
+    public function checkForCurrentUser(Fitting $fitting, ?int $contextDoctrineId = null): array
     {
-        /* Single-fitting personal check has no doctrine context: only directly attached
-           plans apply. Doctrine-inherited plans are scoped to checks that go through a
-           specific group (checkDoctrineForCurrentUser / corp report). */
-        $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM, null);
-        $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED, null);
+        /* Personal single-fit check now carries the doctrine context that the user clicked the
+           fit through (each tree row knows which group it represents). With context, plans behave
+           identically to a group check at this fit: per-fit attach scope=D + universal scope=NULL
+           + D's doctrine attach. Without context (ungrouped fit), only universal direct attaches
+           and no doctrine inheritance — keeps fit-in-D and fit-in-D2 cleanly independent. */
+        $minimum = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_MINIMUM, $contextDoctrineId);
+        $advanced = $this->effectiveRequirementsForTier($fitting, FittingSkillRequirement::TIER_ADVANCED, $contextDoctrineId);
         $allRequirements = collect($minimum)->merge($advanced)->unique('typeId')->values()->all();
         $characters = $this->characters->addMissingSkills($this->characters->forCurrentUser(), $allRequirements);
 
@@ -34,7 +35,7 @@ class PersonalSkillCheckService
                 FittingSkillRequirement::TIER_ADVANCED => $advanced,
             ],
             'characters' => $characters->all(),
-            'plans' => $this->attachedPlansSummary($fitting, null),
+            'plans' => $this->attachedPlansSummary($fitting, $contextDoctrineId),
         ];
     }
 
@@ -79,18 +80,16 @@ class PersonalSkillCheckService
     /**
      * Effective requirements = fitting's own rows MAX-merged with applicable plan items.
      *
-     * Plan scope:
-     *   - Plans attached directly to the fitting: always apply.
-     *   - Plans attached to a doctrine:
-     *       * When $contextDoctrineId is set (group check): ONLY that doctrine's plans
-     *         inherit. Prevents D's plan from leaking into a check of the same fitting
-     *         viewed through D2.
-     *       * When $contextDoctrineId is null (single-fit check): plans from EVERY
-     *         doctrine containing the fitting inherit. Single-fit view has no group
-     *         context, so the safe interpretation is "the fitting belongs to all of
-     *         these groups, all of their requirements apply". Users avoid over-
-     *         constraining by following the copy-fit-per-group convention so each
-     *         fitting normally belongs to only one doctrine.
+     * Strict scope semantics:
+     *   - Direct fit attachments: scope NULL (universal) always; scope = $contextDoctrineId
+     *     when context is set. Per-fit attachments scoped to OTHER doctrines never bleed in
+     *     just because the fit is also a member of those.
+     *   - Doctrine attachments: only $contextDoctrineId's. No context means no doctrine
+     *     inheritance — single-fit personal check of an ungrouped fit shows only its
+     *     universal direct attaches (which should be empty in normal use).
+     *
+     * Personal/management pages always pass the doctrine the user clicked the fit
+     * THROUGH (each tree row knows its group). Group/corp checks pass the active doctrine.
      */
     public function effectiveRequirementsForTier(Fitting $fitting, string $tier, ?int $contextDoctrineId = null): array
     {
@@ -213,13 +212,13 @@ class PersonalSkillCheckService
     /**
      * Build typeId => [{plan_id, level}, ...] from every plan applicable in the given context.
      *
-     * Per-fit attachments are filtered by scope_doctrine_id:
-     *   - scope NULL: universal direct attach (legacy / "global" on this fit).
-     *   - scope = D : attached via doctrine D's per-fit drop zone, only applies when checking
-     *     F in a context where D is relevant.
-     *
-     * Doctrine attachments inherit normally.
-     * Tier-filtered. De-dupes plans by id when multiple paths return the same plan.
+     * Strict scope:
+     *   - Direct fit attachments: scope NULL (universal) + scope = $contextDoctrineId.
+     *     Per-fit attachments scoped to other doctrines are excluded even if the fit is a
+     *     member there — those only apply in their own doctrine context.
+     *   - Doctrine attachments: only $contextDoctrineId. Without context, no doctrine
+     *     inheritance is added.
+     * Tier-filtered. De-dupes plans by id.
      */
     private function collectPlanContributions(Fitting $fitting, string $tier, ?int $contextDoctrineId): array
     {
@@ -238,16 +237,6 @@ class PersonalSkillCheckService
             }])->find($contextDoctrineId);
 
             if ($doctrine) {
-                foreach ($doctrine->skillPlans as $plan) {
-                    $plans->push($plan);
-                }
-            }
-        } else {
-            $doctrines = $fitting->doctrines()->with(['skillPlans' => function ($query) use ($tier) {
-                $query->where('tier', $tier)->with('items');
-            }])->get();
-
-            foreach ($doctrines as $doctrine) {
                 foreach ($doctrine->skillPlans as $plan) {
                     $plans->push($plan);
                 }
@@ -272,14 +261,9 @@ class PersonalSkillCheckService
     /**
      * Plan-attachment summary for the UI.
      *
-     * Direct fit attachments are scope-filtered:
-     *   - scope NULL → reported as via='fitting', via_name=null ("directly attached").
-     *   - scope = D  → reported as via='fitting', via_name=D.name ("attached via D's slot").
-     *
-     * Doctrine attachments follow the existing rules:
-     *   - context set: only that doctrine's plans.
-     *   - context null: every doctrine containing the fitting, each chip labeled with its source.
-     *
+     * Same strict scope as collectPlanContributions:
+     *   - Direct fit attachments: scope NULL + scope = $contextDoctrineId.
+     *   - Doctrine attachments: only $contextDoctrineId.
      * A plan that appears via multiple paths is reported once.
      */
     private function attachedPlansSummary(Fitting $fitting, ?int $contextDoctrineId): array
@@ -310,13 +294,6 @@ class PersonalSkillCheckService
                     $summary[] = $this->planSummaryShape($plan, 'doctrine', $doctrine->name);
                 }
             }
-        } else {
-            $doctrines = $fitting->doctrines()->with(['skillPlans.items.skill'])->get();
-            foreach ($doctrines as $doctrine) {
-                foreach ($doctrine->skillPlans as $plan) {
-                    $summary[] = $this->planSummaryShape($plan, 'doctrine', $doctrine->name);
-                }
-            }
         }
 
         /* Dedupe by plan id; prefer the 'fitting' entry over 'doctrine' if both exist (more specific). */
@@ -333,9 +310,10 @@ class PersonalSkillCheckService
     }
 
     /**
-     * Fetch direct (attachable_type=fitting) attachments matching the given context.
-     * Returns a Collection of attachment rows (with plan_id, scope_doctrine_id) for the caller
-     * to bulk-resolve into plans + scope names.
+     * Fetch direct (attachable_type=fitting) attachments matching the strict scope:
+     * scope NULL (universal) plus scope = $contextDoctrineId (if set). Per-fit attachments
+     * scoped to other doctrines are deliberately excluded — they only apply in their own
+     * context, never via "the fit happens to also be in those doctrines".
      */
     private function relevantDirectAttachments(Fitting $fitting, ?int $contextDoctrineId)
     {
@@ -347,17 +325,7 @@ class PersonalSkillCheckService
                 $q->whereNull('scope_doctrine_id')->orWhere('scope_doctrine_id', $contextDoctrineId);
             });
         } else {
-            $fittingDoctrineIds = DB::table('crypta_tech_seat_doctrine_fitting')
-                ->where('fitting_id', $fitting->fitting_id)
-                ->pluck('doctrine_id')
-                ->all();
-
-            $query->where(function ($q) use ($fittingDoctrineIds) {
-                $q->whereNull('scope_doctrine_id');
-                if (! empty($fittingDoctrineIds)) {
-                    $q->orWhereIn('scope_doctrine_id', $fittingDoctrineIds);
-                }
-            });
+            $query->whereNull('scope_doctrine_id');
         }
 
         return $query->get(['plan_id', 'scope_doctrine_id']);

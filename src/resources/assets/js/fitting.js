@@ -82,7 +82,8 @@ function initializeFittingPage() {
         const id = $(this).data('id');
         const name = $(this).data('name');
         const ship = $(this).data('ship');
-        selectFitting(id, name, ship);
+        const doctrineId = $(this).data('doctrineId') || null;
+        selectFitting(id, name, ship, doctrineId);
     });
 
     $(document).on('click', '.fit-tree-item-action-edit', function (evt) {
@@ -146,8 +147,9 @@ function initializeFittingPage() {
         }).done(function (newFit) {
             loadFittingTree();
             if (newFit && newFit.id) {
-                /* select the new copy so the user can immediately rename / edit */
-                setTimeout(() => selectFitting(newFit.id, newFit.name, ''), 200);
+                /* select the new copy so the user can immediately rename / edit.
+                   doctrineId stays null — copy isn't placed in any group automatically. */
+                setTimeout(() => selectFitting(newFit.id, newFit.name, '', null), 200);
             }
         });
     });
@@ -293,7 +295,9 @@ function renderFitTree() {
                    <button class="btn btn-xs btn-warning fit-tree-item-action-edit" title="${escapeHtml(fitI18n('editFittingTooltip'))}"><i class="fas fa-edit"></i></button>
                    <button class="btn btn-xs btn-danger fit-tree-item-action-delete" title="${escapeHtml(fitI18n('deleteFittingTooltip'))}"><i class="fa fa-trash"></i></button>`
                 : '';
-            return `<div class="fit-tree-item" data-id="${fit.id}" data-name="${escapeHtml(fit.name)}" data-ship="${escapeHtml(fit.shipType)}">
+            /* doctrineId on each row = which group this row represents the fit "in".
+               Empty string when fit is ungrouped — backend treats absence as no-context. */
+            return `<div class="fit-tree-item" data-id="${fit.id}" data-name="${escapeHtml(fit.name)}" data-ship="${escapeHtml(fit.shipType)}" data-doctrine-id="${groupId || ''}">
                 <img class="fit-tree-item-icon" src="${iconUrl}" alt="">
                 <span class="fit-tree-item-name">${escapeHtml(fit.name)} <span class="fit-tree-item-ship">· ${escapeHtml(fit.shipType)}</span></span>
                 <span class="fit-tree-item-actions">${manageBtns}</span>
@@ -329,20 +333,26 @@ function filterFitTree(query) {
     });
 }
 
-function selectFitting(fittingId, fittingName, shipName) {
+function selectFitting(fittingId, fittingName, shipName, doctrineId) {
     if (!fittingId) return;
     FittingState.selectedFittingId = fittingId;
     FittingState.selectedFittingName = fittingName || '';
     FittingState.selectedShipName = shipName || '';
+    FittingState.selectedDoctrineId = doctrineId || null;
 
     $('.fit-tree-item').removeClass('is-selected');
-    $(`.fit-tree-item[data-id="${fittingId}"]`).addClass('is-selected');
+    /* Highlight the exact (fit, doctrine) row the user clicked, so when the same fit is
+       under multiple groups only the matching row gets the selected look. */
+    const selector = doctrineId
+        ? `.fit-tree-item[data-id="${fittingId}"][data-doctrine-id="${doctrineId}"]`
+        : `.fit-tree-item[data-id="${fittingId}"][data-doctrine-id=""]`;
+    $(selector).addClass('is-selected');
 
     $('#fittingId').val(fittingId);
     $('#requirementsFittingId').val(fittingId);
 
     loadFittingDetails(fittingId);
-    loadSkillCheckForFitting(fittingId);
+    loadSkillCheckForFitting(fittingId, doctrineId);
 
     if (window.fittingManageMode) {
         loadRequirementEditor(fittingId);
@@ -428,10 +438,12 @@ function renderFitDetails(result) {
 /* ============================================================
  *  Skill check (right column)
  * ============================================================ */
-function loadSkillCheckForFitting(fittingId) {
+function loadSkillCheckForFitting(fittingId, doctrineId) {
+    doctrineId = doctrineId || FittingState.selectedDoctrineId || null;
     $.ajax({
         url: '/fitting/getskillsbyfitid/' + fittingId,
         type: 'GET',
+        data: doctrineId ? {doctrineId: doctrineId} : {},
         dataType: 'json',
         timeout: 15000,
     }).done(function (result) {
@@ -932,6 +944,6 @@ function saveRequirements() {
         timeout: 10000,
     }).done(function (data) {
         renderRequirementsEditor(data);
-        loadSkillCheckForFitting(fittingId);
+        loadSkillCheckForFitting(fittingId, FittingState.selectedDoctrineId);
     });
 }

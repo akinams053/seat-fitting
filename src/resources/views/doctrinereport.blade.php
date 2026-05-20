@@ -26,22 +26,8 @@
 
             <p class="text-muted small">{!! trans('fitting::doctrine.report_alliance_note') !!}</p>
 
-            <div class="form-group">
-                <label class="small text-muted">{{trans('fitting::doctrine.report_target_label')}}</label>
-                <div class="btn-group btn-group-toggle report-target-toggle" data-toggle="buttons">
-                    <label class="btn btn-sm btn-outline-secondary active">
-                        <input type="radio" name="reportTarget" value="doctrine" checked>
-                        {{trans('fitting::doctrine.report_target_doctrine')}}
-                    </label>
-                    <label class="btn btn-sm btn-outline-secondary">
-                        <input type="radio" name="reportTarget" value="fitting">
-                        {{trans('fitting::doctrine.report_target_fitting')}}
-                    </label>
-                </div>
-            </div>
-
             <div class="form-row">
-                <div class="col-md-9 col-lg-8">
+                <div class="col-md-6">
                     <div class="form-group" id="doctrineSelectGroup">
                         <label for="doctrines" class="small text-muted">{{trans('fitting::doctrine.report_doctrine_label')}}</label>
                         <select id="doctrines" class="form-control form-control-sm">
@@ -50,16 +36,16 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="form-group" id="fittingSelectGroup" style="display:none;">
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group" id="fittingSelectGroup">
                         <label for="reportFitting" class="small text-muted">{{trans('fitting::doctrine.report_fitting_label')}}</label>
                         <select id="reportFitting" class="form-control form-control-sm">
-                            @foreach ($fittings as $fit)
-                                <option value="{{ $fit['id'] }}">{{ $fit['name'] }} · {{ $fit['shipType'] }}</option>
-                            @endforeach
+                            <option value="">{{trans('fitting::doctrine.report_fitting_all')}}</option>
                         </select>
                     </div>
                 </div>
-                <div class="col-md-3 col-lg-4 align-self-end">
+                <div class="col-md-2 align-self-end">
                     <div class="form-group">
                         <button type="button" id="runreport" class="btn btn-info btn-block">
                             <span class="fa fa-sync"></span>
@@ -168,19 +154,35 @@
             });
 
             $('input[name="reportTarget"]').on('change', function () {
-                const v = $('input[name="reportTarget"]:checked').val();
-                $('#doctrineSelectGroup').toggle(v === 'doctrine');
-                $('#fittingSelectGroup').toggle(v === 'fitting');
+                /* legacy radio is gone — kept here as a no-op so any cached browser
+                   handlers from older asset versions don't break the page. */
             });
+
+            /* Per-doctrine fitting list, populated from controller for the cascading dropdown. */
+            const fittingsByDoctrine = @json($fittingsByDoctrine);
+            const fittingAllLabel = "{{trans('fitting::doctrine.report_fitting_all')}}";
+
+            function refreshFittingDropdown() {
+                const doctrineId = parseInt($('#doctrines').val()) || 0;
+                const fits = fittingsByDoctrine[doctrineId] || [];
+                const sel = $('#reportFitting');
+                sel.empty().append('<option value="">' + reportEscape(fittingAllLabel) + '</option>');
+                for (const f of fits) {
+                    sel.append('<option value="' + f.id + '">' + reportEscape(f.name + ' · ' + (f.shipType || '')) + '</option>');
+                }
+            }
+
+            $('#doctrines').on('change', refreshFittingDropdown);
+            refreshFittingDropdown();
         });
 
         button.on('click', function () {
-            const target = $('input[name="reportTarget"]:checked').val();
-            const payload = {};
-            if (target === 'doctrine') {
-                payload.doctrine = parseInt($('#doctrines').val());
-            } else {
-                payload.fitting = parseInt($('#reportFitting').val());
+            const payload = {
+                doctrine: parseInt($('#doctrines').val()),
+            };
+            const fittingId = parseInt($('#reportFitting').val());
+            if (fittingId) {
+                payload.fitting = fittingId;
             }
 
             button.prop('disabled', true).html(

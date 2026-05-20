@@ -141,11 +141,13 @@ class FittingController extends Controller
         return 'Success';
     }
 
-    public function getSkillsByFitId($id)
+    public function getSkillsByFitId($id, Request $request)
     {
         $fitting = Fitting::findOrFail($id);
+        $doctrineId = $request->query('doctrineId');
+        $contextDoctrineId = $doctrineId !== null && $doctrineId !== '' ? (int) $doctrineId : null;
 
-        return response()->json($this->personalSkillCheck->checkForCurrentUser($fitting));
+        return response()->json($this->personalSkillCheck->checkForCurrentUser($fitting, $contextDoctrineId));
     }
 
     public function getSkillsByDoctrineId($id)
@@ -680,16 +682,23 @@ class FittingController extends Controller
     public function viewDoctrineReport()
     {
         $target = $this->resolveFixedReportTarget();
-        $doctrines = Doctrine::orderBy('name')->get();
-        $fittings = Fitting::with('ship')->orderBy('name')->get()->map(fn ($f) => [
-            'id' => $f->fitting_id,
-            'name' => $f->name,
-            'shipType' => $f->ship?->typeName,
-        ]);
+        $doctrines = Doctrine::with(['fittings' => function ($q) {
+            $q->with('ship')->orderBy('name');
+        }])->orderBy('name')->get();
+
+        /* fittingsByDoctrine[doctrineId] = [{id, name, shipType}, ...] so the front-end
+           narrows the fitting dropdown based on the selected doctrine. */
+        $fittingsByDoctrine = $doctrines->mapWithKeys(function (Doctrine $d) {
+            return [$d->id => $d->fittings->map(fn ($f) => [
+                'id' => $f->fitting_id,
+                'name' => $f->name,
+                'shipType' => $f->ship?->typeName,
+            ])->values()->all()];
+        });
 
         return view('fitting::doctrinereport', [
             'doctrines' => $doctrines,
-            'fittings' => $fittings,
+            'fittingsByDoctrine' => $fittingsByDoctrine,
             'targetAlliance' => $target['alliance'],
             'targetCorporation' => $target['corporation'],
         ]);
@@ -698,31 +707,32 @@ class FittingController extends Controller
     public function runReport(Request $request)
     {
         $request->validate([
-            'doctrine' => 'nullable|integer',
+            'doctrine' => 'required|integer',
             'fitting' => 'nullable|integer',
         ]);
 
         $target = $this->resolveFixedReportTarget();
         $allianceIds = [$target['alliance']->alliance_id];
         $corporationIds = [$target['corporation']->corporation_id];
+        $doctrineId = (int) $request->input('doctrine');
 
         if ($request->filled('fitting')) {
-            return response()->json($this->corporationSkillReport->runForFitting(
+            /* Doctrine + specific fit: scope plan inheritance to that doctrine, only run that fit. */
+            $fitting = Fitting::with('ship')->where('fitting_id', (int) $request->input('fitting'))->firstOrFail();
+
+            return response()->json($this->corporationSkillReport->runForFittings(
                 $allianceIds,
                 $corporationIds,
-                (int) $request->input('fitting'),
+                collect([$fitting]),
+                $doctrineId
             ));
         }
 
-        if ($request->filled('doctrine')) {
-            return response()->json($this->corporationSkillReport->run(
-                $allianceIds,
-                $corporationIds,
-                (int) $request->input('doctrine'),
-            ));
-        }
-
-        abort(422, 'Either doctrine or fitting must be provided.');
+        return response()->json($this->corporationSkillReport->run(
+            $allianceIds,
+            $corporationIds,
+            $doctrineId
+        ));
     }
 
     private function resolveFixedReportTarget(): array

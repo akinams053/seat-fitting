@@ -47,7 +47,8 @@ return [
     'report_corporation_placeholder' => 'Sélectionner les corporations',
 
     'report_doctrine_label' => 'Groupe de fittings',
-    'report_fitting_label' => 'Fitting unique',
+    'report_fitting_label' => 'Fitting (filtre optionnel)',
+    'report_fitting_all' => '— Tous les fits —',
     'report_target_label' => 'Cible du contrôle',
     'report_target_doctrine' => 'Groupe de fittings',
     'report_target_fitting' => 'Fitting unique',

@@ -47,7 +47,8 @@ return [
     'report_corporation_placeholder' => 'Select corporations',
 
     'report_doctrine_label' => 'Fitting Group',
-    'report_fitting_label' => 'Single Fitting',
+    'report_fitting_label' => 'Fitting (optional filter)',
+    'report_fitting_all' => '— All fittings —',
     'report_target_label' => 'Check Target',
     'report_target_doctrine' => 'Fitting Group',
     'report_target_fitting' => 'Single Fitting',

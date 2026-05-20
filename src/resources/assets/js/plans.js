@@ -20,23 +20,36 @@ function planEscape(value) {
 }
 
 /* Deterministic per-plan accent color so two different plans never look identical.
-   10-color palette, hash by plan id so the assignment is stable across page reloads. */
+   10-color palette, hash by plan id so the assignment is stable across page reloads.
+   Returns {border, bg} — bg is a low-alpha rgba so text stays readable on the tinted card. */
 const PLAN_PALETTE = [
-    '#3b82f6', /* blue */
-    '#16a34a', /* green */
-    '#dc2626', /* red */
-    '#a855f7', /* purple */
-    '#ea580c', /* orange */
-    '#0891b2', /* cyan */
-    '#ca8a04', /* gold */
-    '#db2777', /* magenta */
-    '#475569', /* slate */
-    '#65a30d', /* lime */
+    {r: 59,  g: 130, b: 246}, /* blue */
+    {r: 22,  g: 163, b: 74},  /* green */
+    {r: 220, g: 38,  b: 38},  /* red */
+    {r: 168, g: 85,  b: 247}, /* purple */
+    {r: 234, g: 88,  b: 12},  /* orange */
+    {r: 8,   g: 145, b: 178}, /* cyan */
+    {r: 202, g: 138, b: 4},   /* gold */
+    {r: 219, g: 39,  b: 119}, /* magenta */
+    {r: 71,  g: 85,  b: 105}, /* slate */
+    {r: 101, g: 163, b: 13},  /* lime */
 ];
 
 function planAccentColor(planId) {
     const n = parseInt(planId) || 0;
-    return PLAN_PALETTE[Math.abs(n) % PLAN_PALETTE.length];
+    const c = PLAN_PALETTE[Math.abs(n) % PLAN_PALETTE.length];
+
+    return {
+        border: `rgb(${c.r}, ${c.g}, ${c.b})`,
+        bg: `rgba(${c.r}, ${c.g}, ${c.b}, 0.16)`,
+        dot: `rgb(${c.r}, ${c.g}, ${c.b})`,
+    };
+}
+
+function planAccentStyle(planId) {
+    const c = planAccentColor(planId);
+
+    return `background-color: ${c.bg}; border-left-color: ${c.border};`;
 }
 
 /* Modal handlers are wired once on first DOMContentLoaded; safe to load on
@@ -268,9 +281,9 @@ function renderAttachedPlanCard(plan) {
     const overflow = (plan.items || []).length > 6 ? `<span class="plan-preview-chip">…+${(plan.items || []).length - 6}</span>` : '';
     const accent = planAccentColor(plan.id);
 
-    return `<div class="attached-plan-card" data-plan-id="${plan.id}" style="border-left-color: ${accent};">
+    return `<div class="attached-plan-card" data-plan-id="${plan.id}" style="${planAccentStyle(plan.id)}">
         <div class="attached-plan-card-head">
-            <span class="plan-accent-dot" style="background:${accent};"></span>
+            <span class="plan-accent-dot" style="background:${accent.dot};"></span>
             <span class="attached-plan-card-name">${planEscape(plan.name)}</span>
             <span class="plan-card-tier ${tierClass}">${tierLabel}</span>
         </div>
