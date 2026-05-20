@@ -2,7 +2,7 @@
 
 A module for [SeAT](https://github.com/eveseat/seat) that holds fittings and can compare the required skills for a fit to your character.
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/denngarr/seat-fitting.svg?style=flat-square)]()
+[![Latest Stable Version](https://img.shields.io/packagist/v/akinams053/seat-fitting.svg?style=flat-square)]()
 [![License](https://img.shields.io/badge/license-GPLv2-blue.svg?style=flat-square)](https://raw.githubusercontent.com/dysath/seat-srp/master/LICENSE)
 
 If you have issues with this, you can contact me on Eve as **Crypta Electrica**, or on the [SeAT Discord](https://eveseat.github.io/docs/about/contact/)
@@ -13,7 +13,7 @@ In your seat directory (By default:  /var/www/seat), type the following:
 
 ```
 php artisan down
-composer require cryptatech/seat-fitting
+composer require akinams053/seat-fitting
 
 php artisan vendor:publish --force --all
 php artisan migrate
@@ -23,7 +23,7 @@ php artisan up
 
 If  using a docker installation see https://eveseat.github.io/docs/admin_guides/docker_admin/#installing-plugins
 
-Use the package name `cryptatech/seat-fitting`
+Use the package name `akinams053/seat-fitting`
 
 And now, when you log into 'Seat', you should see a 'Fittings' link on the left.
 

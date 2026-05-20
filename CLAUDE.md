@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A [SeAT](https://github.com/eveseat/seat) 5.x plugin (Composer package `cryptatech/seat-fitting`) that stores EVE Online ship fittings and doctrines, and compares the required skills for a fit against a character. It is **not** a standalone application — it has no `app/`, no `bootstrap/`, no `artisan`. It only runs inside a host SeAT install and is registered through `CryptaTech\Seat\Fitting\FittingServiceProvider` (declared in `composer.json` under `extra.laravel.providers`).
+A [SeAT](https://github.com/eveseat/seat) 5.x plugin (Composer package `akinams053/seat-fitting`, a fork of upstream `cryptatech/seat-fitting`) that stores EVE Online ship fittings and doctrines, and compares the required skills for a fit against a character. It is **not** a standalone application — it has no `app/`, no `bootstrap/`, no `artisan`. It only runs inside a host SeAT install and is registered through `CryptaTech\Seat\Fitting\FittingServiceProvider` (declared in `composer.json` under `extra.laravel.providers`).
 
 Target PHP: 8.3 (per CI). Dependencies pin to `eveseat/{services,eveapi,web} ^5.0` and `recursivetree/seat-prices-core ^1.0`.
 
@@ -29,7 +29,7 @@ vendor/bin/rector process src --dry-run
 php artisan cryptatech:fittings:upgrade  # migrate pre-v5 fits via the Old* models
 ```
 
-To exercise changes end-to-end you need a working SeAT host. Typical loop: `composer require cryptatech/seat-fitting` (or a path repository pointing at this checkout) in the SeAT install, then `php artisan vendor:publish --force --all && php artisan migrate`. JS/CSS in `src/resources/assets/` is published to `public/web/{js,css}` and must be re-published after edits.
+To exercise changes end-to-end you need a working SeAT host. Typical loop: `composer require akinams053/seat-fitting` (or a path repository pointing at this checkout) in the SeAT install, then `php artisan vendor:publish --force --all && php artisan migrate`. JS/CSS in `src/resources/assets/` is published to `public/web/{js,css}` and must be re-published after edits.
 
 ### SSH helper (`scripts/ssh-seat`)
 
@@ -89,6 +89,6 @@ Server-rendered Blade in `src/resources/views/` (`fitting`, `doctrine`, `doctrin
 ## Conventions
 
 - CI runs `pint` on every push and auto-commits as `Fixes coding style` (see `.github/workflows/lint.yml`). Run pint locally before pushing to avoid the bot creating an extra commit on your branch.
-- The vendor + package name in `composer.json` (`cryptatech/seat-fitting`) and the PSR-4 namespace (`CryptaTech\Seat\Fitting\`) intentionally do not match the GitHub org (`eveseat-plugins`) — `getPackageRepositoryUrl()` is the source of truth for the repo URL. Do not "fix" these to match.
+- The Composer package name (`akinams053/seat-fitting`) and the PSR-4 namespace (`CryptaTech\Seat\Fitting\`) intentionally do not match — the namespace, route prefixes (`cryptafitting::*`), DB table prefix (`crypta_tech_seat_*`), and artisan command (`cryptatech:fittings:upgrade`) all retain the upstream `cryptatech` branding so this fork can be installed over an existing upstream install without DB migration. `getPackageRepositoryUrl()` in `FittingServiceProvider` is the source of truth for the repo URL. Do not "normalize" the namespace to match the new vendor.
 - New permissions must be added to **both** `Config/Permissions/fitting.permissions.php` **and** the `can:fitting.<x>` middleware on the relevant route. Lang keys live under `src/lang/{en,fr}/config.php`.
 - New tables must be added as a migration under `src/database/migrations/`; the service provider auto-loads everything in that directory — no manual registration needed.

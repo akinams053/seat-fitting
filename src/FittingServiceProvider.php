@@ -115,7 +115,7 @@ class FittingServiceProvider extends AbstractSeatPlugin
      */
     public function getPackageRepositoryUrl(): string
     {
-        return 'https://github.com/eveseat-plugins/seat-fitting';
+        return 'https://github.com/akinams053/seat-fitting';
     }
 
     /**
@@ -135,6 +135,6 @@ class FittingServiceProvider extends AbstractSeatPlugin
      */
     public function getPackagistVendorName(): string
     {
-        return 'cryptatech';
+        return 'akinams053';
     }
 }
