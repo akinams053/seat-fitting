@@ -1,6 +1,6 @@
 # ONBOARDING — akinams053/seat-fitting
 
-交接快照日期：2026-05-22。本仓库当前准备发布到 `1.8.1`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
+交接快照日期：2026-05-22。本仓库当前准备发布到 `1.9.0`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
 
 这份文档让下一位接手者在 5 分钟内建立全局上下文；更底层的架构和命令约定在 `CLAUDE.md`。
 
@@ -32,15 +32,15 @@
 | 项目 | 值 |
 |---|---|
 | 当前分支 | `master`，与 `origin/master` 一致 |
-| 最新提交 | `1.8.1` hotfix 提交 |
-| 最新 tag | `1.8.1`（1.8.0 的生产迁移兼容性 hotfix） |
-| Packagist | `1.8.1`（push tag 后 webhook 同步约 30 秒） |
+| 最新提交 | `1.9.0` 发布提交 |
+| 最新 tag | `1.9.0` |
+| Packagist | `1.9.0`（push tag 后 webhook 同步约 30 秒） |
 | 本地工作区 | `.gitignore` / `.claude/` 有未纳入发布的本地状态 |
 
 标签轨迹（按发布顺序）：
 ```
 v1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.2.1 → 1.2.2 → 1.2.3 → 1.2.4 → 1.2.5 →
-1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1
+1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1 → 1.9.0
 ```
 
 **1.5.0 有 migration bug**（drop UNIQUE 被 FK 挡住），后续靠 1.5.1 的幂等 migration 修。从 1.5.0 起任何升级都跳到 1.5.1+。生产部署必须用 ≥1.5.1。
@@ -93,7 +93,7 @@ PHP：composer.json 不声明 `require.php`；CI 锁 PHP 8.3；测试服跑 PHP 
 | Ability | 是否被路由 `can:` 中间件使用 | 备注 |
 |---|---|---|
 | `fitting.view` | ✅ 个人检查 + plan 列表/详情 | |
-| `fitting.create` | ✅ 配装/方案 CRUD + 挂载 + 复制/重命名 | |
+| `fitting.create` | ✅ 配装/方案 CRUD + 挂载 + 复制/重命名 + item-skills 查询（1.9.0 起） | |
 | `fitting.doctrineview` | ✅ 配装分组视图 | |
 | `fitting.reportview` | ✅ 军团技能检查 | |
 | `fitting.lock_doctrine` | ✅ 锁定/解锁分组（1.7.0 新增） | 独立权限：可被任何用户独立授予 |
@@ -292,6 +292,7 @@ effective[tier] = base
 | `1.7.1` | **进阶 ≥ 入门 自动 normalize**（编辑器下拉过滤 + 保存时抬高 + 检查时抬高） |
 | `1.8.0` | **舰队技能审查正式上线**：SeAT SSO 自动识别当前舰队、配装 DPS/DPH 录入、按舰船/配装统计合格人数与整队 DPS/DPH，未匹配舰船单列“未进行审查” |
 | `1.8.1` | **生产迁移兼容性 hotfix**：移除 `SHOW INDEX ... ORDER BY` 写法，兼容生产 MariaDB 的 `SHOW INDEX` 语法 |
+| `1.9.0` | **舰队审查 UI 重做**（顶部 3 张概览卡 DPS/DPH/状态分布 + 按配装达标率单色蓝进度条列表 + 未审查筛选选项）；服务端 `totals` 多了 `theoretical_dps/dph`（按全员 minimum 基线）；军团检查合计卡改左右分栏更紧凑；军团比率改按 **SeAT 主账户** 维度而非 character 维度；舰队检查说明改成「检查人需登录舰队长 / DPS 按入门 / 不要按太快」并整段加粗；配装管理页 fit 详情标题右侧渲染 minimum/advanced × DPS/DPH 读出，未录入显 `—`；**点击装备过滤右侧 requirements editor**（新端点 GET `/fitting/item-skills/{typeId}`，复用 `SkillRequirementCalculator`） |
 
 ### 当前 UI 语义约束（必须保留）
 
@@ -304,6 +305,10 @@ effective[tier] = base
 - 方案管理 UI **只在配装分组页**，不在管理页（1.4.0 起）
 - 每个 fit 树行的 `data-doctrine-id` 是隔离同 fit 跨组 plan 串读的关键（1.6.0 起），不要去掉
 - 进阶 level 始终 ≥ 入门 level（自动 normalize，1.7.1 起）
+- 舰队审查统计区是「3 张概览卡 + 按配装达标率列表」结构（1.9.0 起），**不要**回退到 1.8.x 的 6 格密铺
+- 军团检查合计比率分母是 **SeAT user 数**（主账户）不是 character 数（1.9.0 起）；service `totalsByFittingId.chars / minimum / advanced` 在 `aggregateByUser` 后被重算
+- 配装管理页 fit 详情卡右侧渲染 DPS/DPH 读出（1.9.0 起），独立于 edit modal 录入界面
+- 配装管理页点 `.fit-detail-item` 会按该装备所需技能筛选右侧 requirements editor（1.9.0 起，仅 `window.fittingManageMode` 为 true 时生效）；切换 fit 自动 clear；filter 通过隐藏不匹配的 `tr[data-skill-type-id]` 实现，不动数据
 
 ---
 
@@ -318,7 +323,7 @@ effective[tier] = base
 | Web URL | `http://ylxh.de` |
 | APP_ENV | `local`，APP_DEBUG enabled |
 | PHP | `8.4.21` |
-| composer 装的插件版本 | `akinams053/seat-fitting dev-master 1de09df`（正式 tag 后可切到 `1.8.1`） |
+| composer 装的插件版本 | `akinams053/seat-fitting dev-master 8613853`（1.9.0 release commit；tag 推送后 composer 会拉到 `1.9.0`）|
 | `FITTING_BYPASS_PERMISSIONS` | `true`（任何登录用户都能看 UI、也能 lock 分组）|
 
 认证方式：`.creds.test` 第 4 行写 `scripts/test.key`，`ssh_seat.py` 见 `/` 自动走 key 认证。换机器要同步 `.creds.test` + `scripts/test.key` 并 `chmod 600`。
