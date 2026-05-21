@@ -119,4 +119,13 @@ return [
     'fleet_error_esi_unavailable' => 'ESI 客户端暂时不可用或授权刷新失败',
     'fleet_error_empty' => 'ESI 返回的舰队成员为空。',
     'fleet_error_fitting_not_in_doctrine' => '选择的配装不属于该配装分组。',
+
+    'fleet_overview_dps_title' => 'DPS 概览',
+    'fleet_overview_dph_title' => 'DPH 概览',
+    'fleet_overview_theoretical' => '/ 理论 :value',
+    'fleet_overview_status_title' => '状态分布',
+    'fleet_overview_total_members' => '总人数',
+    'fleet_ship_progress_title' => '按配装达标率',
+    'fleet_ship_progress_unreviewed_section' => '未匹配舰船',
+    'fleet_filter_unreviewed' => '未审查',
 ];

@@ -80,6 +80,8 @@ class FleetSkillReviewService
                 'unreviewed' => $rowCollection->where('matched', false)->count(),
                 'fleetDps' => collect($shipTotals['reviewed'])->sum('fleet_dps'),
                 'fleetDph' => collect($shipTotals['reviewed'])->sum('fleet_dph'),
+                'theoretical_dps' => collect($shipTotals['reviewed'])->sum(fn ($r) => $r['members'] * (float) ($r['minimum_dps'] ?? 0)),
+                'theoretical_dph' => collect($shipTotals['reviewed'])->sum(fn ($r) => $r['members'] * (float) ($r['minimum_dph'] ?? 0)),
             ],
         ];
     }

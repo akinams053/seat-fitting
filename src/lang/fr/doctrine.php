@@ -119,4 +119,13 @@ return [
     'fleet_error_esi_unavailable' => 'le client ESI est indisponible ou le rafraîchissement du token a échoué',
     'fleet_error_empty' => 'ESI n\'a renvoyé aucun membre de flotte.',
     'fleet_error_fitting_not_in_doctrine' => 'Le fitting sélectionné n\'appartient pas à ce groupe de fittings.',
+
+    'fleet_overview_dps_title' => 'Vue DPS',
+    'fleet_overview_dph_title' => 'Vue DPH',
+    'fleet_overview_theoretical' => '/ théorique :value',
+    'fleet_overview_status_title' => 'Répartition des statuts',
+    'fleet_overview_total_members' => 'Total',
+    'fleet_ship_progress_title' => 'Aptitude par fitting',
+    'fleet_ship_progress_unreviewed_section' => 'Vaisseaux non couverts',
+    'fleet_filter_unreviewed' => 'Non examiné',
 ];

@@ -119,4 +119,13 @@ return [
     'fleet_error_esi_unavailable' => 'the ESI client is unavailable or token refresh failed',
     'fleet_error_empty' => 'ESI returned no fleet members.',
     'fleet_error_fitting_not_in_doctrine' => 'The selected fitting does not belong to this fitting group.',
+
+    'fleet_overview_dps_title' => 'DPS Overview',
+    'fleet_overview_dph_title' => 'DPH Overview',
+    'fleet_overview_theoretical' => '/ theoretical :value',
+    'fleet_overview_status_title' => 'Status Distribution',
+    'fleet_overview_total_members' => 'Total',
+    'fleet_ship_progress_title' => 'By-Fitting Readiness',
+    'fleet_ship_progress_unreviewed_section' => 'Unmatched Ships',
+    'fleet_filter_unreviewed' => 'Unreviewed',
 ];

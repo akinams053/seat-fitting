@@ -873,3 +873,153 @@ tr.report-alt-detail > td {
 .doctrine-group.is-locked .plan-card-attached { opacity: 0.85; }
 .doctrine-group-lock { padding: 0 6px; }
 .doctrine-group-lock:hover { color: #d4a657 !important; }
+
+/* ============================================================
+ *  Fleet review · overview cards + ship progress list
+ *  Reuses .report-totals-* base; only modifiers + new ship-progress
+ *  component live here so corp report can borrow the bars later.
+ * ============================================================ */
+
+.report-totals-grid--3col {
+    grid-template-columns: 1fr;
+}
+@media (min-width: 576px) {
+    .report-totals-grid--3col { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 992px) {
+    .report-totals-grid--3col { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.report-totals-cell-value-lg {
+    font-size: 26px;
+    font-weight: 600;
+    color: #2c3038;
+    line-height: 1.2;
+    margin-top: 4px;
+}
+.report-totals-cell-value-sub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--fit-blue-text);
+}
+
+.status-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-top: 6px;
+}
+.status-pill-row .status-pill {
+    font-size: 11px;
+}
+.status-pill-row .status-pill-count {
+    margin-left: 4px;
+    background: rgba(0, 0, 0, 0.12);
+    font-weight: 600;
+}
+
+.ship-progress-list {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--fit-neutral-soft);
+    border-radius: var(--fit-radius-lg);
+}
+.ship-progress-section-header {
+    font-weight: 500;
+    font-size: 13px;
+    color: #2c3038;
+    margin: 6px 0 6px;
+}
+.ship-progress-section-header:first-child { margin-top: 0; }
+.ship-progress-rows {
+    background: #fff;
+    border: 1px solid #e6e9ed;
+    border-radius: var(--fit-radius);
+    overflow: hidden;
+}
+.ship-progress-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 240px) 1fr 160px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef0f3;
+    transition: background-color var(--fit-transition);
+}
+.ship-progress-row:last-child { border-bottom: none; }
+.ship-progress-row:hover { background: rgba(92, 143, 207, 0.04); }
+.ship-progress-row.is-unreviewed { background: rgba(108, 117, 125, 0.03); }
+
+.ship-progress-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.ship-progress-name-primary {
+    font-weight: 500;
+    font-size: 13px;
+    color: #2c3038;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ship-progress-name-sub {
+    font-size: 11px;
+    color: var(--fit-neutral-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ship-progress-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ship-progress-bar {
+    flex: 1;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--fit-blue-soft);
+    overflow: hidden;
+}
+.ship-progress-bar-fill {
+    height: 100%;
+    background: var(--fit-blue);
+    border-radius: 999px;
+    transition: width 300ms ease;
+}
+.ship-progress-bar-fill.is-empty { background: var(--fit-neutral); }
+.ship-progress-rate {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fit-blue-text);
+    min-width: 42px;
+    text-align: right;
+}
+.ship-progress-rate.is-muted { color: var(--fit-neutral-text); }
+
+.ship-progress-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+    align-items: center;
+}
+.ship-progress-meta .status-pill {
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+@media (max-width: 575px) {
+    .ship-progress-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    .ship-progress-meta {
+        justify-content: flex-start;
+    }
+}
