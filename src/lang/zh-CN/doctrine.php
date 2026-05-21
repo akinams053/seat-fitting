@@ -44,7 +44,7 @@ return [
     'report_page_title' => '军团技能检查',
 
     'report_alliance_label' => '联盟',
-    'report_alliance_note' => '<b>说明：</b>当前仅检查 Fraternity.[FRT] 联盟下 YeLuo-XingHai 军团的成员。',
+    'report_alliance_note' => '<b>说明：</b>当前仅检查 Fraternity.[FRT] 联盟下 YeLuo-XingHai 军团中仍有有效 SeAT 授权的角色；已过期、撤销或缺失授权的角色不会纳入统计。',
     'report_alliance_placeholder' => '选择联盟',
 
     'report_corporation_label' => '军团',

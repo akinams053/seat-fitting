@@ -73,6 +73,7 @@ class CorporationSkillReportService
                 $affiliation->whereIn('corporation_id', $corporationIds);
             }
         })
+            ->whereIn('character_id', RefreshToken::query()->select('character_id'))
             ->select('character_id', 'name', 'title')
             ->get();
 
@@ -151,18 +152,13 @@ class CorporationSkillReportService
     /**
      * Group character results by SeAT user (account) so the report can collapse alts under their main.
      *
-     * Characters with no RefreshToken row (never registered in SeAT) become single-character pseudo-users
-     * keyed by character_id so they still show up in the table.
+     * Characters without an active RefreshToken should normally be filtered out before aggregation.
+     * The orphan fallback remains as a guard for races or inconsistent data.
      */
     private function aggregateByUser(Collection $characterSnapshots, Collection $fittings, array $charsById): array
     {
         $characterIds = $characterSnapshots->keys()->all();
-        /* withTrashed: SeAT soft-deletes RefreshToken when an SSO authorisation expires or scopes
-           shrink. The user → character link is still meaningful for aggregation even though the
-           token can no longer refresh — the cached CharacterSkill snapshot is what we read here,
-           not live API data. Without withTrashed every once-registered-but-now-expired character
-           gets treated as an orphan, which on a real corp inflates the user count ~10×. */
-        $tokens = RefreshToken::withTrashed()->whereIn('character_id', $characterIds)
+        $tokens = RefreshToken::whereIn('character_id', $characterIds)
             ->select('character_id', 'user_id')
             ->get()
             ->keyBy('character_id');

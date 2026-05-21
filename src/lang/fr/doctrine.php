@@ -44,7 +44,7 @@ return [
     'report_page_title' => 'Contrôle de compétences corporation',
 
     'report_alliance_label' => 'Alliance',
-    'report_alliance_note' => '<b>Note :</b> Les contrôles sont actuellement limités à YeLuo-XingHai dans Fraternity.[FRT].',
+    'report_alliance_note' => '<b>Note :</b> Les contrôles sont actuellement limités à YeLuo-XingHai dans Fraternity.[FRT] et incluent uniquement les personnages avec une autorisation SeAT active. Les autorisations expirées, révoquées ou absentes sont exclues.',
     'report_alliance_placeholder' => 'Sélectionner les alliances',
 
     'report_corporation_label' => 'Corporation',

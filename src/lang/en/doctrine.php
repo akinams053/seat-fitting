@@ -44,7 +44,7 @@ return [
     'report_page_title' => 'Corporation Skill Check',
 
     'report_alliance_label' => 'Alliance',
-    'report_alliance_note' => '<b>Note:</b> Checks are currently scoped to YeLuo-XingHai inside Fraternity.[FRT].',
+    'report_alliance_note' => '<b>Note:</b> Checks are currently scoped to YeLuo-XingHai inside Fraternity.[FRT] and only include characters with an active SeAT authorisation. Expired, revoked, or missing authorisations are excluded.',
     'report_alliance_placeholder' => 'Select alliances',
 
     'report_corporation_label' => 'Corporation',
