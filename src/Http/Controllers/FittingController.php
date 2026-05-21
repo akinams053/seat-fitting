@@ -12,6 +12,7 @@ use CryptaTech\Seat\Fitting\Models\FittingSkillPlanAttachment;
 use CryptaTech\Seat\Fitting\Models\FittingSkillPlanItem;
 use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
 use CryptaTech\Seat\Fitting\Services\CorporationSkillReportService;
+use CryptaTech\Seat\Fitting\Services\FleetSkillReviewService;
 use CryptaTech\Seat\Fitting\Services\PersonalSkillCheckService;
 use CryptaTech\Seat\Fitting\Services\SkillPlanParser;
 use CryptaTech\Seat\Fitting\Services\SkillRequirementSyncService;
@@ -33,6 +34,7 @@ class FittingController extends Controller
         private PersonalSkillCheckService $personalSkillCheck,
         private SkillRequirementSyncService $skillRequirementSync,
         private CorporationSkillReportService $corporationSkillReport,
+        private FleetSkillReviewService $fleetSkillReview,
         private SkillPlanParser $skillPlanParser,
     ) {}
 
@@ -799,6 +801,45 @@ class FittingController extends Controller
             $corporationIds,
             $doctrineId
         ));
+    }
+
+    public function viewFleetReview()
+    {
+        $doctrines = Doctrine::with(['fittings' => function ($q) {
+            $q->with('ship')->orderBy('name');
+        }])->orderBy('name')->get();
+
+        $fittingsByDoctrine = $doctrines->mapWithKeys(function (Doctrine $d) {
+            return [$d->id => $d->fittings->map(fn ($f) => [
+                'id' => $f->fitting_id,
+                'name' => $f->name,
+                'shipType' => $f->ship?->typeName,
+            ])->values()->all()];
+        });
+
+        return view('fitting::fleetreview', [
+            'doctrines' => $doctrines,
+            'fittingsByDoctrine' => $fittingsByDoctrine,
+        ]);
+    }
+
+    public function runFleetReview(Request $request)
+    {
+        $request->validate([
+            'fleet_id' => 'required|integer|min:1',
+            'doctrine' => 'required|integer',
+            'fitting' => 'nullable|integer',
+        ]);
+
+        try {
+            return response()->json($this->fleetSkillReview->run(
+                (int) $request->input('fleet_id'),
+                (int) $request->input('doctrine'),
+                $request->filled('fitting') ? (int) $request->input('fitting') : null
+            ));
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     private function resolveFixedReportTarget(): array

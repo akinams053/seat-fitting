@@ -27,7 +27,7 @@ return [
     'permission_corporation_report_desc' => '能够按配装要求检查军团成员技能',
 
     'permission_fleet_review_label' => '使用舰队审查',
-    'permission_fleet_review_desc' => '为后续舰队审查功能预留的权限',
+    'permission_fleet_review_desc' => '能够读取 ESI 舰队成员并按配装分组检查技能',
 
     'permission_lock_doctrine_label' => '锁定配装分组',
     'permission_lock_doctrine_desc' => '能够锁定/解锁配装分组。锁定后该分组下任何配装、技能方案、改名删除等修改都会被拒绝，直到再次解锁。',

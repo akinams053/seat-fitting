@@ -27,7 +27,7 @@ return [
     'permission_corporation_report_desc' => 'Ability to check corporation members against fitting requirements',
 
     'permission_fleet_review_label' => 'Use Fleet Review',
-    'permission_fleet_review_desc' => 'Reserved permission for future fleet review features',
+    'permission_fleet_review_desc' => 'Ability to read ESI fleet members and check skills by fitting group',
 
     'permission_lock_doctrine_label' => 'Lock Fitting Groups',
     'permission_lock_doctrine_desc' => 'Ability to lock/unlock a fitting group. Once locked, every modification on that group (fittings, plans, rename, delete) is rejected until it is unlocked again.',

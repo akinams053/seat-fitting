@@ -180,6 +180,16 @@ Route::group([
             'uses' => 'FittingController@runReport',
             'middleware' => 'can:fitting.reportview',
         ]);
+        Route::get('/fleetReview', [
+            'as' => 'cryptafitting::fleetreview',
+            'uses' => 'FittingController@viewFleetReview',
+            'middleware' => 'can:fitting.fleet_review',
+        ]);
+        Route::post('/runFleetReview', [
+            'as' => 'cryptafitting::runfleetreview',
+            'uses' => 'FittingController@runFleetReview',
+            'middleware' => 'can:fitting.fleet_review',
+        ]);
 
         /* Auxiliary skill plans */
         Route::get('/plans', [

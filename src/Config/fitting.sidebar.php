@@ -40,6 +40,14 @@ return [
                 'route' => 'cryptafitting::doctrinereport',
                 'permission' => 'fitting.reportview',
             ],
+            'fleetreview' => [
+                'label' => 'fitting::config.menu_fleet_review',
+                'name' => 'Fleet Review',
+                'icon' => 'fas fa-users',
+                'route_segment' => 'fitting',
+                'route' => 'cryptafitting::fleetreview',
+                'permission' => 'fitting.fleet_review',
+            ],
         ],
     ],
 ];

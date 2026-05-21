@@ -27,7 +27,7 @@ return [
     'permission_corporation_report_desc' => 'Possibilité de vérifier les membres de la corporation selon les exigences de fitting',
 
     'permission_fleet_review_label' => 'Utiliser la revue de flotte',
-    'permission_fleet_review_desc' => 'Permission réservée pour les futures fonctions de revue de flotte',
+    'permission_fleet_review_desc' => 'Possibilité de lire les membres de flotte ESI et de vérifier les compétences par groupe de fittings',
 
     'permission_lock_doctrine_label' => 'Verrouiller les groupes de fittings',
     'permission_lock_doctrine_desc' => 'Possibilité de verrouiller/déverrouiller un groupe de fittings. Une fois verrouillé, toute modification (fittings, plans, renommage, suppression) est refusée jusqu\'au déverrouillage.',
