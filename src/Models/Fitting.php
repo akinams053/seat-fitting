@@ -59,7 +59,22 @@ class Fitting extends Model
 
     protected $table = 'crypta_tech_seat_fittings';
 
-    protected $fillable = ['name', 'description', 'ship_type_id'];
+    protected $fillable = [
+        'name',
+        'description',
+        'ship_type_id',
+        'minimum_dps',
+        'minimum_dph',
+        'advanced_dps',
+        'advanced_dph',
+    ];
+
+    protected $casts = [
+        'minimum_dps' => 'float',
+        'minimum_dph' => 'float',
+        'advanced_dps' => 'float',
+        'advanced_dph' => 'float',
+    ];
 
     /**
      * The primary key associated with the table.

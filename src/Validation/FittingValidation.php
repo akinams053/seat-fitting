@@ -16,6 +16,10 @@ class FittingValidation extends FormRequest
         return [
             'fitSelection' => 'nullable',
             'eftfitting' => 'required',
+            'minimum_dps' => 'nullable|numeric|min:0',
+            'minimum_dph' => 'nullable|numeric|min:0',
+            'advanced_dps' => 'nullable|numeric|min:0',
+            'advanced_dph' => 'nullable|numeric|min:0',
         ];
     }
 }

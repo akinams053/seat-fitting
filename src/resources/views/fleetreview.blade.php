@@ -65,16 +65,22 @@
         const fleetI18n = {
             character: "{{trans('fitting::doctrine.fleet_character_header')}}",
             nickname: "{{trans('fitting::doctrine.report_nickname_header')}}",
-            role: "{{trans('fitting::doctrine.fleet_role_header')}}",
             ship: "{{trans('fitting::doctrine.fleet_ship_header')}}",
             fitting: "{{trans('fitting::doctrine.fleet_fitting_header')}}",
-            checkType: "{{trans('fitting::doctrine.fleet_check_type_header')}}",
+            match: "{{trans('fitting::doctrine.fleet_match_header')}}",
             result: "{{trans('fitting::doctrine.fleet_result_header')}}",
             totals: "{{trans('fitting::doctrine.report_totals_header')}}",
             statusFailed: "{{trans('fitting::doctrine.report_status_failed')}}",
             statusEntry: "{{trans('fitting::doctrine.report_status_entry')}}",
             statusAdvanced: "{{trans('fitting::doctrine.report_status_advanced')}}",
             notSet: "{{trans('fitting::doctrine.report_not_configured_badge')}}",
+            notReviewed: "{{trans('fitting::doctrine.fleet_not_reviewed')}}",
+            matchSuccess: "{{trans('fitting::doctrine.fleet_match_success')}}",
+            matchFailed: "{{trans('fitting::doctrine.fleet_match_failed')}}",
+            totalDamage: "{{trans('fitting::doctrine.fleet_total_damage_header')}}",
+            dps: "{{trans('fitting::doctrine.fleet_dps_label')}}",
+            dph: "{{trans('fitting::doctrine.fleet_dph_label')}}",
+            shipTotals: "{{trans('fitting::doctrine.fleet_ship_totals_header')}}",
             filterAll: "{{trans('fitting::doctrine.report_filter_all')}}",
             filterFailed: "{{trans('fitting::doctrine.report_filter_failed')}}",
             filterEntry: "{{trans('fitting::doctrine.report_filter_entry')}}",
@@ -96,6 +102,21 @@
             else if (status === 'entry') { cls = 'is-entry'; label = fleetI18n.statusEntry; }
             else if (status === 'advanced') { cls = 'is-advanced'; label = fleetI18n.statusAdvanced; }
             return `<span class="status-pill ${cls} ${large ? 'is-lg' : ''}">${fleetEscape(label)}</span>`;
+        }
+
+        function matchPill(matched) {
+            return matched
+                ? `<span class="status-pill is-entry">${fleetEscape(fleetI18n.matchSuccess)}</span>`
+                : `<span class="status-pill is-not-set">${fleetEscape(fleetI18n.matchFailed)}</span>`;
+        }
+
+        function notReviewedPill() {
+            return `<span class="status-pill is-not-set">${fleetEscape(fleetI18n.notReviewed)}</span>`;
+        }
+
+        function formatNumber(value) {
+            const number = Number(value || 0);
+            return number.toLocaleString(undefined, {maximumFractionDigits: 2});
         }
 
         const button = $('#runFleetReview');
@@ -201,19 +222,38 @@
 
         function renderReport(result) {
             const rows = result.rows || [];
-            const totals = result.totals || {members: 0, failed: 0, entry: 0, advanced: 0};
+            const totals = result.totals || {members: 0, failed: 0, entry: 0, advanced: 0, unreviewed: 0, fleetDps: 0, fleetDph: 0};
+            const shipTotals = result.shipTotals || {reviewed: [], unreviewed: []};
+            const reviewedCells = (shipTotals.reviewed || []).map(function (item) {
+                return `<div class="report-totals-cell">
+                    <div class="report-totals-cell-title">${fleetEscape(item.ship_type)} <span class="text-muted">${fleetEscape(item.fitting_name)}</span></div>
+                    <div class="mt-1">${statusPill('failed', false)} <span class="text-muted">${item.failed || 0}</span> ${statusPill('entry', false)} <span class="text-muted">${item.entry || 0}</span> ${statusPill('advanced', false)} <span class="text-muted">${item.advanced || 0}</span></div>
+                    <div class="mt-1"><span class="text-muted">${fleetEscape(fleetI18n.dps)}</span> ${formatNumber(item.fleet_dps)} <span class="text-muted ml-2">${fleetEscape(fleetI18n.dph)}</span> ${formatNumber(item.fleet_dph)}</div>
+                </div>`;
+            }).join('');
+            const unreviewedCells = (shipTotals.unreviewed || []).map(function (item) {
+                return `<div class="report-totals-cell">
+                    <div class="report-totals-cell-title">${fleetEscape(item.ship_type)}</div>
+                    <div class="mt-1">${notReviewedPill()} <span class="text-muted">${item.members || 0}</span></div>
+                </div>`;
+            }).join('');
 
             $('#reportTotalsSummary').html(`
-                <div class="report-totals-header">${fleetEscape(fleetI18n.totals)} <span class="text-muted">(${totals.members || 0})</span></div>
+                <div class="report-totals-header">${fleetEscape(fleetI18n.totalDamage)} <span class="text-muted">(${totals.members || 0})</span></div>
                 <div class="report-totals-grid">
+                    <div class="report-totals-cell"><div class="report-totals-cell-title">${fleetEscape(fleetI18n.dps)}</div><div class="mt-1">${formatNumber(totals.fleetDps)}</div></div>
+                    <div class="report-totals-cell"><div class="report-totals-cell-title">${fleetEscape(fleetI18n.dph)}</div><div class="mt-1">${formatNumber(totals.fleetDph)}</div></div>
                     <div class="report-totals-cell"><div class="report-totals-cell-title">${fleetEscape(fleetI18n.filterFailed)}</div><div class="mt-1">${statusPill('failed', false)} <span class="text-muted">${totals.failed || 0}</span></div></div>
                     <div class="report-totals-cell"><div class="report-totals-cell-title">${fleetEscape(fleetI18n.filterEntry)}</div><div class="mt-1">${statusPill('entry', false)} <span class="text-muted">${totals.entry || 0}</span></div></div>
                     <div class="report-totals-cell"><div class="report-totals-cell-title">${fleetEscape(fleetI18n.filterAdvanced)}</div><div class="mt-1">${statusPill('advanced', false)} <span class="text-muted">${totals.advanced || 0}</span></div></div>
+                    <div class="report-totals-cell"><div class="report-totals-cell-title">${fleetEscape(fleetI18n.notReviewed)}</div><div class="mt-1">${notReviewedPill()} <span class="text-muted">${totals.unreviewed || 0}</span></div></div>
                 </div>
+                <div class="report-totals-header mt-3">${fleetEscape(fleetI18n.shipTotals)}</div>
+                <div class="report-totals-grid">${reviewedCells}${unreviewedCells}</div>
             `);
 
-            const header = `<th>${fleetEscape(fleetI18n.character)}</th><th>${fleetEscape(fleetI18n.nickname)}</th><th>${fleetEscape(fleetI18n.role)}</th><th>${fleetEscape(fleetI18n.ship)}</th><th>${fleetEscape(fleetI18n.fitting)}</th><th>${fleetEscape(fleetI18n.checkType)}</th><th>${fleetEscape(fleetI18n.result)}</th>`;
-            const filterRow = `<tr class="report-filter-row"><th></th><th></th><th></th><th></th><th></th><th></th><th>
+            const header = `<th>${fleetEscape(fleetI18n.character)}</th><th>${fleetEscape(fleetI18n.nickname)}</th><th>${fleetEscape(fleetI18n.ship)}</th><th>${fleetEscape(fleetI18n.fitting)}</th><th>${fleetEscape(fleetI18n.match)}</th><th>${fleetEscape(fleetI18n.result)}</th>`;
+            const filterRow = `<tr class="report-filter-row"><th></th><th></th><th></th><th></th><th></th><th>
                 <select class="form-control form-control-sm report-column-filter">
                     <option value="all">${fleetEscape(fleetI18n.filterAll)}</option>
                     <option value="failed">${fleetEscape(fleetI18n.filterFailed)}</option>
@@ -224,15 +264,15 @@
             report.find('thead').append(`<tr>${header}</tr>${filterRow}`);
 
             for (const row of rows) {
-                const order = row.status === 'failed' ? 0 : row.status === 'entry' ? 1 : row.status === 'advanced' ? 2 : 3;
+                const status = row.matched ? row.status : 'unreviewed';
+                const order = status === 'failed' ? 0 : status === 'entry' ? 1 : status === 'advanced' ? 2 : 3;
                 report.find('tbody').append(`<tr>
                     <td>${fleetEscape(row.character_name)}</td>
                     <td>${fleetEscape(row.nickname)}</td>
-                    <td>${fleetEscape(row.role_name || row.role)}</td>
                     <td>${fleetEscape(row.ship_type)}</td>
-                    <td>${fleetEscape(row.fitting_name)}</td>
-                    <td>${fleetEscape(row.check_type)}</td>
-                    <td class="fleet-status-cell" data-status="${fleetEscape(row.status)}" data-order="${order}">${statusPill(row.status, false)}</td>
+                    <td>${fleetEscape(row.fitting_name || fleetI18n.notReviewed)}</td>
+                    <td>${matchPill(!!row.matched)}</td>
+                    <td class="fleet-status-cell" data-status="${fleetEscape(status)}" data-order="${order}">${row.matched ? statusPill(row.status, false) : notReviewedPill()}</td>
                 </tr>`);
             }
 
@@ -248,7 +288,7 @@
                 autoWidth: false,
                 columnDefs: [
                     {targets: '_all', className: 'align-middle'},
-                    {targets: 6, className: 'align-middle text-center'},
+                    {targets: 5, className: 'align-middle text-center'},
                 ],
             });
 

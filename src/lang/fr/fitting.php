@@ -43,6 +43,10 @@ return [
 
     'edit_fitting_modal_title' => 'Êtes-vous sûr ?',
     'edit_fitting_body' => 'Copiez-collez le fitting EFT dans la zone ci-dessous',
+    'damage_metric_minimum_dps' => 'DPS de base (optionnel)',
+    'damage_metric_minimum_dph' => 'DPH de base (optionnel)',
+    'damage_metric_advanced_dps' => 'DPS avancé (optionnel)',
+    'damage_metric_advanced_dph' => 'DPH avancé (optionnel)',
 
     'delete_fitting_modal_title' => 'Êtes-vous sûr ?',
     'delete_fitting_modal_body' => 'Voulez-vous vraiment supprimer ce fitting ?',

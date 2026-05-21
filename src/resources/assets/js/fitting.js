@@ -8,6 +8,22 @@ function fitI18n(key) {
     return (window.fittingI18n || {})[key] || key;
 }
 
+const DAMAGE_METRIC_FIELDS = ['minimum_dps', 'minimum_dph', 'advanced_dps', 'advanced_dph'];
+
+function clearDamageMetricInputs() {
+    DAMAGE_METRIC_FIELDS.forEach(function (field) {
+        $('#' + field).val('');
+    });
+}
+
+function fillDamageMetricInputs(metrics) {
+    metrics = metrics || {};
+    DAMAGE_METRIC_FIELDS.forEach(function (field) {
+        const value = metrics[field];
+        $('#' + field).val(value === null || value === undefined ? '' : value);
+    });
+}
+
 /* ============================================================
  *  State container — keeps the most recent fetched payloads so
  *  switching character / tab / fitting does not re-hit the server.
@@ -91,12 +107,16 @@ function initializeFittingPage() {
         const id = $(this).closest('.fit-tree-item').data('id');
         $('#fitEditModal').modal('show');
         $('#fitSelection').val(id);
+        $('textarea#eftfitting').val('');
+        clearDamageMetricInputs();
         $.ajax({
-            url: '/fitting/geteftfittingbyid/' + id,
+            url: '/fitting/getfittingbyid/' + id,
             type: 'GET',
+            dataType: 'json',
             timeout: 10000,
         }).done(function (result) {
-            $('textarea#eftfitting').val(result);
+            $('textarea#eftfitting').val(result.eft || '');
+            fillDamageMetricInputs(result.damageMetrics);
         });
     });
 
@@ -215,6 +235,7 @@ function initializeFittingPage() {
         $('#fitEditModal').modal('show');
         $('#fitSelection').val('0');
         $('textarea#eftfitting').val('');
+        clearDamageMetricInputs();
     });
 
     /* Delete confirm inside modal */

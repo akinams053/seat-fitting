@@ -50,7 +50,7 @@ class FleetSkillReviewService
             $matchingFittings = $fittingsByShip->get($shipTypeId, collect());
 
             if ($matchingFittings->isEmpty()) {
-                $rows[] = $this->unmatchedRow($member, $charactersById, $shipsById, $fittingId ? $fittings->first() : null);
+                $rows[] = $this->unmatchedRow($member, $charactersById, $shipsById);
                 continue;
             }
 
@@ -59,6 +59,10 @@ class FleetSkillReviewService
             }
         }
 
+        $rowCollection = collect($rows);
+        $matchedRows = $rowCollection->where('matched', true);
+        $shipTotals = $this->shipTotals($fittings, $members, $rowCollection, $shipsById);
+
         return [
             'fleetId' => $fleet['fleet_id'],
             'doctrine' => [
@@ -66,12 +70,16 @@ class FleetSkillReviewService
                 'name' => $doctrine->name,
             ],
             'rows' => $rows,
+            'shipTotals' => $shipTotals,
             'totals' => [
                 'members' => $members->count(),
                 'rows' => count($rows),
-                'failed' => collect($rows)->where('status', 'failed')->count(),
-                'entry' => collect($rows)->where('status', 'entry')->count(),
-                'advanced' => collect($rows)->where('status', 'advanced')->count(),
+                'failed' => $matchedRows->where('status', 'failed')->count(),
+                'entry' => $matchedRows->where('status', 'entry')->count(),
+                'advanced' => $matchedRows->where('status', 'advanced')->count(),
+                'unreviewed' => $rowCollection->where('matched', false)->count(),
+                'fleetDps' => collect($shipTotals['reviewed'])->sum('fleet_dps'),
+                'fleetDph' => collect($shipTotals['reviewed'])->sum('fleet_dph'),
             ],
         ];
     }
@@ -142,6 +150,7 @@ class FleetSkillReviewService
                 'fitting_id' => $fitting->fitting_id,
                 'fitting_name' => $fitting->name,
                 'check_type' => trans('fitting::doctrine.fleet_check_type_no_skill_data'),
+                'matched' => true,
                 'status' => 'failed',
                 'ship_passed' => false,
                 'minimum' => false,
@@ -158,6 +167,7 @@ class FleetSkillReviewService
             'fitting_id' => $fitting->fitting_id,
             'fitting_name' => $fitting->name,
             'check_type' => trans('fitting::doctrine.fleet_check_type_fitting'),
+            'matched' => true,
             'status' => $status,
             'ship_passed' => $shipPassed,
             'minimum' => $minimum,
@@ -165,15 +175,16 @@ class FleetSkillReviewService
         ]);
     }
 
-    private function unmatchedRow(array $member, Collection $charactersById, Collection $shipsById, ?Fitting $targetFitting): array
+    private function unmatchedRow(array $member, Collection $charactersById, Collection $shipsById): array
     {
         $character = $charactersById->get((int) $member['character_id']);
         $ship = $shipsById->get((int) $member['ship_type_id']);
 
         return $this->baseRow($member, $character, $ship, [
-            'fitting_id' => $targetFitting?->fitting_id,
-            'fitting_name' => $targetFitting?->name ?? '',
+            'fitting_id' => null,
+            'fitting_name' => '',
             'check_type' => trans('fitting::doctrine.fleet_check_type_no_match'),
+            'matched' => false,
             'status' => 'failed',
             'ship_passed' => false,
             'minimum' => false,
@@ -192,6 +203,63 @@ class FleetSkillReviewService
             'ship_type_id' => (int) $member['ship_type_id'],
             'ship_type' => $ship?->typeName ?? '#'.$member['ship_type_id'],
         ], $check);
+    }
+
+    private function shipTotals(Collection $fittings, Collection $members, Collection $rows, Collection $shipsById): array
+    {
+        $rowsByFitting = $rows->where('matched', true)->groupBy('fitting_id');
+        $reviewed = [];
+
+        foreach ($fittings as $fitting) {
+            $fitRows = $rowsByFitting->get($fitting->fitting_id, collect());
+            $failed = $fitRows->where('status', 'failed')->count();
+            $entry = $fitRows->where('status', 'entry')->count();
+            $advanced = $fitRows->where('status', 'advanced')->count();
+            $minimumDps = (float) ($fitting->minimum_dps ?? 0);
+            $minimumDph = (float) ($fitting->minimum_dph ?? 0);
+            $advancedDps = (float) ($fitting->advanced_dps ?? 0);
+            $advancedDph = (float) ($fitting->advanced_dph ?? 0);
+
+            $reviewed[] = [
+                'ship_type_id' => (int) $fitting->ship_type_id,
+                'ship_type' => $fitting->ship?->typeName ?? '#'.$fitting->ship_type_id,
+                'fitting_id' => (int) $fitting->fitting_id,
+                'fitting_name' => $fitting->name,
+                'failed' => $failed,
+                'entry' => $entry,
+                'advanced' => $advanced,
+                'members' => $fitRows->count(),
+                'minimum_dps' => $fitting->minimum_dps,
+                'minimum_dph' => $fitting->minimum_dph,
+                'advanced_dps' => $fitting->advanced_dps,
+                'advanced_dph' => $fitting->advanced_dph,
+                'fleet_dps' => ($entry * $minimumDps) + ($advanced * $advancedDps),
+                'fleet_dph' => ($entry * $minimumDph) + ($advanced * $advancedDph),
+            ];
+        }
+
+        $reviewedShipTypeIds = $fittings->pluck('ship_type_id')->map(fn ($shipTypeId) => (int) $shipTypeId)->unique()->all();
+        $unreviewed = $members
+            ->filter(fn ($member) => ! in_array((int) $member['ship_type_id'], $reviewedShipTypeIds, true))
+            ->groupBy(fn ($member) => (int) $member['ship_type_id'])
+            ->map(function (Collection $shipMembers, $shipTypeId) use ($shipsById) {
+                $shipTypeId = (int) $shipTypeId;
+                $ship = $shipsById->get($shipTypeId);
+
+                return [
+                    'ship_type_id' => $shipTypeId,
+                    'ship_type' => $ship?->typeName ?? '#'.$shipTypeId,
+                    'members' => $shipMembers->count(),
+                ];
+            })
+            ->sortBy('ship_type')
+            ->values()
+            ->all();
+
+        return [
+            'reviewed' => $reviewed,
+            'unreviewed' => $unreviewed,
+        ];
     }
 
     private function skillMap(array $skills): array

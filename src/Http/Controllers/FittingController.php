@@ -324,6 +324,7 @@ class FittingController extends Controller
             $fit = Fitting::createFromEve($request->eftfitting);
         }
 
+        $this->applyDamageMetrics($fit, $request);
         $this->skillRequirementSync->syncCalculatedMinimumRequirements($fit);
 
         // dispatch an event so other plugins know that a fitting has updated
@@ -341,6 +342,16 @@ class FittingController extends Controller
         abort(410);
     }
 
+    private function applyDamageMetrics(Fitting $fitting, Request $request): void
+    {
+        foreach (['minimum_dps', 'minimum_dph', 'advanced_dps', 'advanced_dph'] as $field) {
+            $value = $request->input($field);
+            $fitting->{$field} = $value === null || $value === '' ? null : $value;
+        }
+
+        $fitting->save();
+    }
+
     private function fittingParser($fit)
     {
         $jsfit = [];
@@ -348,6 +359,7 @@ class FittingController extends Controller
         $jsfit['eft'] = $fit->toEve();
         $jsfit['shipname'] = $fit->ship->typeName;
         $jsfit['fitname'] = $fit->name;
+        $jsfit['damageMetrics'] = $this->damageMetrics($fit);
         $jsfit['dronebay'] = [];
         $jsfit['cargo'] = [];
         foreach ($fit->items as $ls) {
@@ -380,6 +392,16 @@ class FittingController extends Controller
         return $jsfit;
     }
 
+    private function damageMetrics(Fitting $fitting): array
+    {
+        return [
+            'minimum_dps' => $fitting->minimum_dps,
+            'minimum_dph' => $fitting->minimum_dph,
+            'advanced_dps' => $fitting->advanced_dps,
+            'advanced_dph' => $fitting->advanced_dph,
+        ];
+    }
+
     public function postSkills(FittingValidation $request)
     {
         abort(410);
@@ -396,6 +418,7 @@ class FittingController extends Controller
         return response()->json([
             'minimum' => $minimum,
             'advanced' => $advanced,
+            'damageMetrics' => $this->damageMetrics($fitting),
         ]);
     }
 
@@ -1127,6 +1150,10 @@ class FittingController extends Controller
             $copy->name = $this->buildCopyName($source->name);
             $copy->description = $source->description;
             $copy->ship_type_id = $source->ship_type_id;
+            $copy->minimum_dps = $source->minimum_dps;
+            $copy->minimum_dph = $source->minimum_dph;
+            $copy->advanced_dps = $source->advanced_dps;
+            $copy->advanced_dph = $source->advanced_dph;
             $copy->save();
 
             foreach ($source->items as $item) {

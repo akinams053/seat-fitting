@@ -43,6 +43,10 @@ return [
 
     'edit_fitting_modal_title' => 'Are you sure?',
     'edit_fitting_body' => 'Cut and paste the EFT fitting in the box below',
+    'damage_metric_minimum_dps' => 'Baseline DPS (optional)',
+    'damage_metric_minimum_dph' => 'Baseline DPH (optional)',
+    'damage_metric_advanced_dps' => 'Advanced DPS (optional)',
+    'damage_metric_advanced_dph' => 'Advanced DPH (optional)',
 
     'delete_fitting_modal_title' => 'Are you sure?',
     'delete_fitting_modal_body' => 'Are you sure you want to delete this fitting?',

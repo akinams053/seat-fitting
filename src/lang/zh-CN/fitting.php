@@ -43,6 +43,10 @@ return [
 
     'edit_fitting_modal_title' => '确认操作？',
     'edit_fitting_body' => '将 EFT 格式配装粘贴到下方文本框中',
+    'damage_metric_minimum_dps' => '入门 DPS（可选）',
+    'damage_metric_minimum_dph' => '入门 DPH（可选）',
+    'damage_metric_advanced_dps' => '进阶 DPS（可选）',
+    'damage_metric_advanced_dph' => '进阶 DPH（可选）',
 
     'delete_fitting_modal_title' => '确认删除？',
     'delete_fitting_modal_body' => '确定要删除这套配装吗？',
