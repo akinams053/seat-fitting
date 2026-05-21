@@ -92,9 +92,7 @@ return [
     'report_orphan_label' => 'Unregistered',
 
     'fleet_page_title' => 'Fleet Skill Review',
-    'fleet_note' => '<b>Note:</b> Enter a fleet_id to read fleet members with a character on your current SeAT account that has the esi-fleets.read_fleet.v1 scope. The result is cached for 5 seconds only; external Bearer tokens are not stored.',
-    'fleet_id_label' => 'Fleet ID',
-    'fleet_id_placeholder' => 'Enter fleet ID...',
+    'fleet_note' => '<b>Note:</b> The system automatically uses a character on your current SeAT account that has esi-fleets.read_fleet.v1 and is currently in fleet to read the current fleet members. Only SeAT-stored authorisations are used; external Bearer tokens are not stored.',
     'fleet_run_btn' => 'Run Fleet Review',
     'fleet_run_btn_last_failed' => 'Run Fleet Review (Last Review Failed)',
     'fleet_run_btn_last_timeout' => 'Run Fleet Review (Last Review Timed Out)',
@@ -108,6 +106,7 @@ return [
     'fleet_check_type_no_match' => 'No Matching Fitting',
     'fleet_check_type_no_skill_data' => 'No Skill Data',
     'fleet_error_no_token' => 'Your account has no active character token with esi-fleets.read_fleet.v1, so fleet members cannot be read.',
+    'fleet_error_not_in_fleet' => 'None of the fleet-authorised characters on your account are in a readable fleet.',
     'fleet_error_esi' => 'Failed to read fleet members: :message',
     'fleet_error_esi_unavailable' => 'the ESI client is unavailable or token refresh failed',
     'fleet_error_empty' => 'ESI returned no fleet members.',

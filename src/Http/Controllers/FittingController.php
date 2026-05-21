@@ -826,14 +826,12 @@ class FittingController extends Controller
     public function runFleetReview(Request $request)
     {
         $request->validate([
-            'fleet_id' => 'required|integer|min:1',
             'doctrine' => 'required|integer',
             'fitting' => 'nullable|integer',
         ]);
 
         try {
             return response()->json($this->fleetSkillReview->run(
-                (int) $request->input('fleet_id'),
                 (int) $request->input('doctrine'),
                 $request->filled('fitting') ? (int) $request->input('fitting') : null
             ));

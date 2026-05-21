@@ -92,9 +92,7 @@ return [
     'report_orphan_label' => '未注册',
 
     'fleet_page_title' => '舰队技能审查',
-    'fleet_note' => '<b>说明：</b>输入 fleet_id 后，系统会使用你当前 SeAT 账号下具备 esi-fleets.read_fleet.v1 授权的角色读取舰队成员。只会保存 5 秒短缓存，不会保存外部 Bearer token。',
-    'fleet_id_label' => 'Fleet ID',
-    'fleet_id_placeholder' => '输入舰队 ID...',
+    'fleet_note' => '<b>说明：</b>系统会使用你当前 SeAT 账号下具备 esi-fleets.read_fleet.v1 授权且正在舰队中的角色自动读取当前舰队成员。只会使用 SeAT 已保存授权，不会保存外部 Bearer token。',
     'fleet_run_btn' => '开始舰队审查',
     'fleet_run_btn_last_failed' => '开始舰队审查（上次失败）',
     'fleet_run_btn_last_timeout' => '开始舰队审查（上次超时）',
@@ -108,6 +106,7 @@ return [
     'fleet_check_type_no_match' => '无匹配配装',
     'fleet_check_type_no_skill_data' => '无技能数据',
     'fleet_error_no_token' => '当前账号没有具备 esi-fleets.read_fleet.v1 授权的有效角色，无法读取舰队成员。',
+    'fleet_error_not_in_fleet' => '当前账号下具备舰队授权的角色都不在可读取的舰队中。',
     'fleet_error_esi' => '读取舰队成员失败：:message',
     'fleet_error_esi_unavailable' => 'ESI 客户端暂时不可用或授权刷新失败',
     'fleet_error_empty' => 'ESI 返回的舰队成员为空。',

@@ -19,11 +19,12 @@ class FleetSkillReviewService
         private PersonalSkillCheckService $personalSkillCheck,
     ) {}
 
-    public function run(int $fleetId, int $doctrineId, ?int $fittingId = null): array
+    public function run(int $doctrineId, ?int $fittingId = null): array
     {
         $doctrine = Doctrine::with(['fittings.ship'])->findOrFail($doctrineId);
         $fittings = $this->selectedFittings($doctrine, $fittingId);
-        $members = collect($this->fleetEsi->members($fleetId));
+        $fleet = $this->fleetEsi->currentFleetMembers();
+        $members = collect($fleet['members']);
 
         if ($members->isEmpty()) {
             throw new RuntimeException(trans('fitting::doctrine.fleet_error_empty'));
@@ -59,7 +60,7 @@ class FleetSkillReviewService
         }
 
         return [
-            'fleetId' => $fleetId,
+            'fleetId' => $fleet['fleet_id'],
             'doctrine' => [
                 'id' => $doctrine->id,
                 'name' => $doctrine->name,

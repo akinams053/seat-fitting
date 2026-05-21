@@ -92,9 +92,7 @@ return [
     'report_orphan_label' => 'Non enregistré',
 
     'fleet_page_title' => 'Revue de compétences de flotte',
-    'fleet_note' => '<b>Note :</b> Saisissez un fleet_id pour lire les membres de flotte avec un personnage de votre compte SeAT disposant du scope esi-fleets.read_fleet.v1. Le résultat est mis en cache pendant 5 secondes seulement ; les Bearer tokens externes ne sont pas stockés.',
-    'fleet_id_label' => 'Fleet ID',
-    'fleet_id_placeholder' => 'Saisir l\'ID de flotte...',
+    'fleet_note' => '<b>Note :</b> Le système utilise automatiquement un personnage de votre compte SeAT disposant du scope esi-fleets.read_fleet.v1 et actuellement en flotte pour lire les membres de la flotte actuelle. Seules les autorisations enregistrées dans SeAT sont utilisées ; les Bearer tokens externes ne sont pas stockés.',
     'fleet_run_btn' => 'Lancer la revue de flotte',
     'fleet_run_btn_last_failed' => 'Lancer la revue de flotte (dernier échec)',
     'fleet_run_btn_last_timeout' => 'Lancer la revue de flotte (dernier délai dépassé)',
@@ -108,6 +106,7 @@ return [
     'fleet_check_type_no_match' => 'Aucun fitting correspondant',
     'fleet_check_type_no_skill_data' => 'Aucune donnée de compétences',
     'fleet_error_no_token' => 'Votre compte ne possède aucun token de personnage actif avec esi-fleets.read_fleet.v1 ; les membres de flotte ne peuvent pas être lus.',
+    'fleet_error_not_in_fleet' => 'Aucun personnage autorisé pour la flotte sur votre compte n’est dans une flotte lisible.',
     'fleet_error_esi' => 'Échec de lecture des membres de flotte : :message',
     'fleet_error_esi_unavailable' => 'le client ESI est indisponible ou le rafraîchissement du token a échoué',
     'fleet_error_empty' => 'ESI n\'a renvoyé aucun membre de flotte.',

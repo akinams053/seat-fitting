@@ -16,13 +16,7 @@
             <p class="text-muted small">{!! trans('fitting::doctrine.fleet_note') !!}</p>
 
             <div class="form-row">
-                <div class="col-md-3">
-                    <div class="form-group" id="fleetIdGroup">
-                        <label for="fleetId" class="small text-muted">{{trans('fitting::doctrine.fleet_id_label')}}</label>
-                        <input type="number" min="1" id="fleetId" class="form-control form-control-sm" placeholder="{{trans('fitting::doctrine.fleet_id_placeholder')}}">
-                    </div>
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-5">
                     <div class="form-group" id="doctrineSelectGroup">
                         <label for="doctrines" class="small text-muted">{{trans('fitting::doctrine.report_doctrine_label')}}</label>
                         <select id="doctrines" class="form-control form-control-sm">
@@ -32,7 +26,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-5">
                     <div class="form-group" id="fittingSelectGroup">
                         <label for="reportFitting" class="small text-muted">{{trans('fitting::doctrine.report_fitting_label')}}</label>
                         <select id="reportFitting" class="form-control form-control-sm">
@@ -152,7 +146,6 @@
 
         button.on('click', function () {
             const payload = {
-                fleet_id: parseInt($('#fleetId').val()),
                 doctrine: parseInt($('#doctrines').val()),
             };
             const fittingId = parseInt($('#reportFitting').val());
