@@ -70,6 +70,11 @@ Route::group([
             'uses' => 'FittingController@searchSkills',
             'middleware' => 'can:fitting.create',
         ]);
+        Route::get('/item-skills/{typeId}', [
+            'as' => 'cryptafitting::itemSkills',
+            'uses' => 'FittingController@getItemSkills',
+            'middleware' => 'can:fitting.create',
+        ]);
         Route::get('/{id}/requirements', [
             'as' => 'cryptafitting::requirements',
             'uses' => 'FittingController@getFittingRequirements',

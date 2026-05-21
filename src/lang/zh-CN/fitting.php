@@ -139,4 +139,7 @@ return [
     'export_missing_empty' => '（所有技能均已达标）',
     'export_copy_btn' => '复制',
     'export_copy_done' => '已复制',
+
+    'requirements_filter_label' => '已按装备筛选：:name · 共 :count 个技能',
+    'requirements_filter_clear' => '清除筛选',
 ];

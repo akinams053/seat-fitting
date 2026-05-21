@@ -139,4 +139,7 @@ return [
     'export_missing_empty' => '(All skills already met)',
     'export_copy_btn' => 'Copy',
     'export_copy_done' => 'Copied',
+
+    'requirements_filter_label' => 'Filtered by item: :name · :count skills',
+    'requirements_filter_clear' => 'Clear filter',
 ];

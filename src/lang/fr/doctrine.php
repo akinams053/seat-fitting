@@ -92,7 +92,7 @@ return [
     'report_orphan_label' => 'Non enregistré',
 
     'fleet_page_title' => 'Revue de compétences de flotte',
-    'fleet_note' => '<b>Note :</b> Le système utilise automatiquement un personnage de votre compte SeAT disposant du scope esi-fleets.read_fleet.v1 et actuellement en flotte pour lire les membres de la flotte actuelle. Seules les autorisations enregistrées dans SeAT sont utilisées ; les Bearer tokens externes ne sont pas stockés.',
+    'fleet_note' => '<b>L\'examinateur doit être connecté avec le personnage commandant de flotte. Le DPS théorique est calculé au niveau minimum. Ne cliquez pas trop souvent.</b>',
     'fleet_run_btn' => 'Lancer la revue de flotte',
     'fleet_run_btn_last_failed' => 'Lancer la revue de flotte (dernier échec)',
     'fleet_run_btn_last_timeout' => 'Lancer la revue de flotte (dernier délai dépassé)',

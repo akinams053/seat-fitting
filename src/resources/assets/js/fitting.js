@@ -35,6 +35,8 @@ const FittingState = {
     selectedShipName: '',
     skillsPayload: null,
     activeTier: 'minimum',
+    requirementsFilterTypeId: null,
+    requirementsFilterName: '',
 };
 
 /* ============================================================
@@ -178,6 +180,25 @@ function initializeFittingPage() {
     $(document).on('click', '.fit-detail-slot-header', function () {
         const slot = $(this).closest('.fit-detail-slot');
         slot.attr('data-expanded', slot.attr('data-expanded') === 'true' ? 'false' : 'true');
+    });
+
+    /* Per-item filter for the requirements editor (manage mode only). Clicking an item
+       narrows the right-side editor to that item's skills; clicking the same item again
+       toggles the filter off. */
+    $(document).on('click', '.fit-detail-item', function () {
+        if (!window.fittingManageMode) return;
+        const typeId = parseInt($(this).attr('data-type-id'));
+        if (!typeId) return;
+        if (FittingState.requirementsFilterTypeId === typeId) {
+            clearRequirementsFilter();
+            return;
+        }
+        const name = $(this).find('.fit-detail-item-name').text().trim() || ('#' + typeId);
+        applyRequirementsFilter(typeId, name, $(this));
+    });
+
+    $(document).on('click', '#clearRequirementsFilter', function () {
+        clearRequirementsFilter();
     });
 
     /* Tabs */
@@ -408,6 +429,10 @@ function renderFitDetails(result) {
     $('#fitDetailEmpty').hide();
     $('#fitDetail').show().removeClass('fit-fade-in').addClass('fit-fade-in');
     $('#fitDetailTitle').text(`${result.shipname || ''} · ${result.fitname || ''}`);
+    renderFitDetailMetrics(result.damageMetrics || {});
+    /* Switching fittings invalidates any active per-item filter — the new fit may have a
+       completely different set of modules. Reset before rebuilding the item list. */
+    clearRequirementsFilter();
 
     /* Clear all slots first */
     const slotIds = ['highSlots', 'midSlots', 'lowSlots', 'rigs', 'subSlots', 'drones', 'cargo'];
@@ -437,17 +462,17 @@ function renderFitDetails(result) {
         if (slotId === 'drones' || slotId === 'cargo') {
             for (const itemId in slot) {
                 const item = slot[itemId];
-                $(`#${slotId}Items`).append(`<div class="fit-detail-item">
+                $(`#${slotId}Items`).append(`<div class="fit-detail-item" data-type-id="${itemId}">
                     <img src="${iconBase}/${itemId}/icon?size=32" alt="">
-                    <span>${escapeHtml(item.name)}</span>
+                    <span class="fit-detail-item-name">${escapeHtml(item.name)}</span>
                     <span class="fit-detail-item-qty">x${item.qty}</span>
                 </div>`);
                 counts[slotId] += item.qty || 1;
             }
         } else {
-            $(`#${slotId}Items`).append(`<div class="fit-detail-item">
+            $(`#${slotId}Items`).append(`<div class="fit-detail-item" data-type-id="${slot.id}">
                 <img src="${iconBase}/${slot.id}/icon?size=32" alt="">
-                <span>${escapeHtml(slot.name)}</span>
+                <span class="fit-detail-item-name">${escapeHtml(slot.name)}</span>
             </div>`);
             counts[slotId]++;
         }
@@ -465,6 +490,87 @@ function renderFitDetails(result) {
             slotEl.hide();
         }
     }
+}
+
+/* Render the per-tier DPS/DPH read-out shown to the right of the fit title.
+   Always renders both rows so a missing metric is visible as "—", which lets the
+   manager spot fittings that haven't had damage numbers entered yet. */
+function renderFitDetailMetrics(metrics) {
+    const el = $('#fitDetailMetrics');
+    if (!el.length) return;
+    const fmt = function (v) {
+        if (v === null || v === undefined || v === '') return '—';
+        return Number(v).toLocaleString(undefined, {maximumFractionDigits: 2});
+    };
+    el.html(`
+        <div class="fit-detail-metric-row">
+            <span class="fit-detail-metric-label">${escapeHtml(fitI18n('tabEntry'))}</span>
+            <span class="fit-detail-metric-value">DPS <b>${fmt(metrics.minimum_dps)}</b> · DPH <b>${fmt(metrics.minimum_dph)}</b></span>
+        </div>
+        <div class="fit-detail-metric-row">
+            <span class="fit-detail-metric-label">${escapeHtml(fitI18n('tabAdvanced'))}</span>
+            <span class="fit-detail-metric-value">DPS <b>${fmt(metrics.advanced_dps)}</b> · DPH <b>${fmt(metrics.advanced_dph)}</b></span>
+        </div>
+    `);
+}
+
+/* ============================================================
+ *  Requirements editor — per-item skill filter
+ *  In manage mode, clicking an item in the fit detail filters the right-side
+ *  requirements editor down to only the skills that item depends on, so the
+ *  editor can tune a single module's skills without scrolling the whole list.
+ * ============================================================ */
+function applyRequirementsFilter(typeId, displayName, sourceEl) {
+    if (!window.fittingManageMode) return;
+    typeId = parseInt(typeId);
+    if (!typeId) return;
+    FittingState.requirementsFilterTypeId = typeId;
+    FittingState.requirementsFilterName = displayName || '';
+    $('.fit-detail-item.is-filter-active').removeClass('is-filter-active');
+    if (sourceEl && sourceEl.length) sourceEl.addClass('is-filter-active');
+
+    $.ajax({
+        url: '/fitting/item-skills/' + typeId,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+    }).done(function (data) {
+        /* Bail if the user already switched fits or cleared the filter mid-request. */
+        if (FittingState.requirementsFilterTypeId !== typeId) return;
+        const skillIds = (data.skills || []).map(s => parseInt(s.typeId));
+        const skillSet = new Set(skillIds);
+        $('#requirements-box .req-tier-panel tbody tr').each(function () {
+            const tr = $(this);
+            const sid = parseInt(tr.attr('data-skill-type-id'));
+            tr.toggle(skillSet.has(sid));
+        });
+        showRequirementsFilterBanner(displayName || ('#' + typeId), skillIds.length);
+    });
+}
+
+function clearRequirementsFilter() {
+    if (FittingState.requirementsFilterTypeId === null) return;
+    FittingState.requirementsFilterTypeId = null;
+    FittingState.requirementsFilterName = '';
+    $('.fit-detail-item.is-filter-active').removeClass('is-filter-active');
+    $('#requirements-box .req-tier-panel tbody tr').show();
+    hideRequirementsFilterBanner();
+}
+
+function showRequirementsFilterBanner(displayName, skillCount) {
+    const banner = $('#requirementsFilterBanner');
+    if (!banner.length) return;
+    const tpl = fitI18n('requirementsFilterLabel') || 'Filtered by item: :name · :count skills';
+    const text = tpl.replace(':name', displayName).replace(':count', skillCount);
+    banner.find('.requirements-filter-text').text(text);
+    banner.show();
+}
+
+function hideRequirementsFilterBanner() {
+    const banner = $('#requirementsFilterBanner');
+    if (!banner.length) return;
+    banner.hide();
+    banner.find('.requirements-filter-text').text('');
 }
 
 /* ============================================================

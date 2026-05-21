@@ -88,6 +88,7 @@
             exportMissingEmpty: "{{trans('fitting::fitting.export_missing_empty')}}",
             exportCopyBtn: "{{trans('fitting::fitting.export_copy_btn')}}",
             exportCopyDone: "{{trans('fitting::fitting.export_copy_done')}}",
+            requirementsFilterLabel: "{{trans('fitting::fitting.requirements_filter_label', ['name' => ':name', 'count' => ':count'])}}",
             confirmBtn: "{{trans('fitting::global.submit_btn')}}",
             cancelBtn: "{{trans('fitting::global.cancel_btn')}}"
         };

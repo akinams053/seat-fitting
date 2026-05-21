@@ -459,8 +459,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 0;
+    padding: 4px 6px;
     font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color var(--fit-transition), box-shadow var(--fit-transition);
+}
+.fit-detail-item:hover {
+    background: rgba(92, 143, 207, 0.08);
+}
+.fit-detail-item.is-filter-active {
+    background: var(--fit-blue-soft);
+    box-shadow: inset 2px 0 0 var(--fit-blue);
 }
 .fit-detail-item img {
     width: 22px;
@@ -469,6 +479,26 @@
 .fit-detail-item-qty {
     margin-left: auto;
     color: var(--fit-neutral-text);
+}
+
+/* Requirements editor filter banner — appears when the manager clicks an item in
+   the fit detail to narrow the editor to that item's skills only. */
+.requirements-filter-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    background: var(--fit-blue-soft);
+    color: var(--fit-blue-text);
+    border-radius: var(--fit-radius);
+    font-size: 12px;
+}
+.requirements-filter-banner .requirements-filter-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ---------- Big CTA (录入页) ---------- */
@@ -1022,4 +1052,84 @@ tr.report-alt-detail > td {
     .ship-progress-meta {
         justify-content: flex-start;
     }
+}
+
+/* Damage metrics read-out next to the fit title — shown in the manage page so the
+   editor knows at a glance which fits still need DPS/DPH entered. */
+.fit-detail-metrics {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--fit-neutral-text);
+    text-align: right;
+    flex: 0 0 auto;
+}
+.fit-detail-metric-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.fit-detail-metric-label {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--fit-neutral-soft);
+    color: var(--fit-neutral-text);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.fit-detail-metric-value {
+    color: #2c3038;
+    font-size: 11px;
+}
+.fit-detail-metric-value b {
+    color: var(--fit-blue-text);
+    font-weight: 600;
+}
+
+/* Corp report totals cell variant: left = name/ship, right = stacked pills.
+   Tightens the per-fitting block so info fills the card instead of pooling
+   in the left column with empty space on the right. */
+.report-totals-cell--split {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+}
+.report-totals-cell--split .report-totals-cell-info {
+    flex: 1;
+    min-width: 0;
+}
+.report-totals-cell--split .report-totals-cell-title {
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.report-totals-cell--split .report-totals-cell-sub {
+    font-size: 12px;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.report-totals-cell-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+    flex: 0 0 auto;
+}
+.report-totals-cell-stats .status-pill {
+    font-size: 12px;
+    padding: 3px 10px;
+    white-space: nowrap;
 }

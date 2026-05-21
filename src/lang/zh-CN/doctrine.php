@@ -92,7 +92,7 @@ return [
     'report_orphan_label' => '未注册',
 
     'fleet_page_title' => '舰队技能审查',
-    'fleet_note' => '<b>说明：</b>系统会使用你当前 SeAT 账号下具备 esi-fleets.read_fleet.v1 授权且正在舰队中的角色自动读取当前舰队成员。只会使用 SeAT 已保存授权，不会保存外部 Bearer token。',
+    'fleet_note' => '<b>检查人需要登录舰队长角色进行检查，DPS 理论按入门计算，不要按太快。</b>',
     'fleet_run_btn' => '开始舰队审查',
     'fleet_run_btn_last_failed' => '开始舰队审查（上次失败）',
     'fleet_run_btn_last_timeout' => '开始舰队审查（上次超时）',

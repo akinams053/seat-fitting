@@ -92,7 +92,7 @@ return [
     'report_orphan_label' => 'Unregistered',
 
     'fleet_page_title' => 'Fleet Skill Review',
-    'fleet_note' => '<b>Note:</b> The system automatically uses a character on your current SeAT account that has esi-fleets.read_fleet.v1 and is currently in fleet to read the current fleet members. Only SeAT-stored authorisations are used; external Bearer tokens are not stored.',
+    'fleet_note' => '<b>The reviewer must be signed in as the fleet boss character. Theoretical DPS is computed at the minimum tier. Do not click run too frequently.</b>',
     'fleet_run_btn' => 'Run Fleet Review',
     'fleet_run_btn_last_failed' => 'Run Fleet Review (Last Review Failed)',
     'fleet_run_btn_last_timeout' => 'Run Fleet Review (Last Review Timed Out)',

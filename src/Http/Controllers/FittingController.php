@@ -15,6 +15,7 @@ use CryptaTech\Seat\Fitting\Services\CorporationSkillReportService;
 use CryptaTech\Seat\Fitting\Services\FleetSkillReviewService;
 use CryptaTech\Seat\Fitting\Services\PersonalSkillCheckService;
 use CryptaTech\Seat\Fitting\Services\SkillPlanParser;
+use CryptaTech\Seat\Fitting\Services\SkillRequirementCalculator;
 use CryptaTech\Seat\Fitting\Services\SkillRequirementSyncService;
 use CryptaTech\Seat\Fitting\Validation\DoctrineValidation;
 use CryptaTech\Seat\Fitting\Validation\FittingValidation;
@@ -478,6 +479,21 @@ class FittingController extends Controller
 
         return response()->json([
             'results' => $skills,
+        ]);
+    }
+
+    /**
+     * Return the SDE-derived skill list for a single item type. Used by the manage
+     * page to let the editor filter the requirement editor to only skills belonging
+     * to whichever item the user clicked in the fit detail.
+     */
+    public function getItemSkills($typeId, SkillRequirementCalculator $calculator)
+    {
+        $skills = $calculator->calculateForTypeId((int) $typeId);
+
+        return response()->json([
+            'typeId' => (int) $typeId,
+            'skills' => $skills,
         ]);
     }
 

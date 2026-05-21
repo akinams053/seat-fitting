@@ -139,4 +139,7 @@ return [
     'export_missing_empty' => '(Toutes les compétences sont déjà acquises)',
     'export_copy_btn' => 'Copier',
     'export_copy_done' => 'Copié',
+
+    'requirements_filter_label' => 'Filtré par équipement : :name · :count compétences',
+    'requirements_filter_clear' => 'Effacer le filtre',
 ];

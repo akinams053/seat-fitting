@@ -146,6 +146,33 @@ class CorporationSkillReportService
 
         $data['usersById'] = $this->aggregateByUser($characterSnapshots, $fittings, $data['charsById']);
 
+        /* Recompute per-fitting totals on the SeAT-user axis so the percentages displayed in
+           the totals summary reflect "how many accounts pass" rather than "how many alts pass".
+           One account with 3 alts where any alt meets the bar should count once, not three times. */
+        $userCount = count($data['usersById']);
+        $data['totals']['chars'] = $userCount;
+        $data['totalsByFittingId']['chars'] = $userCount;
+
+        foreach ($fittings as $fitting) {
+            $fittingId = $fitting->fitting_id;
+            $minUsers = 0;
+            $advUsers = 0;
+            foreach ($data['usersById'] as $u) {
+                $entry = $u['fittings'][$fittingId] ?? null;
+                if (! $entry) {
+                    continue;
+                }
+                if (! empty($entry['minimum'])) {
+                    $minUsers++;
+                }
+                if (($entry['advanced'] ?? null) === true) {
+                    $advUsers++;
+                }
+            }
+            $data['totalsByFittingId'][$fittingId]['minimum'] = $minUsers;
+            $data['totalsByFittingId'][$fittingId]['advanced'] = $advUsers;
+        }
+
         return $data;
     }
 

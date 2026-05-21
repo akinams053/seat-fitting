@@ -5,8 +5,9 @@
 </div>
 
 <div id="fitDetail" style="display:none;">
-    <div class="d-flex align-items-center justify-content-between mb-2">
+    <div class="d-flex align-items-start justify-content-between mb-2">
         <h6 class="mb-0" id="fitDetailTitle"></h6>
+        <div id="fitDetailMetrics" class="fit-detail-metrics"></div>
     </div>
 
     @foreach([

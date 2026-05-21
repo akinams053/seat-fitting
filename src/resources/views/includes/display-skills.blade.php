@@ -57,6 +57,14 @@
         <div class="card-body">
             <input type="hidden" id="requirementsFittingId" value="">
 
+            <div id="requirementsFilterBanner" class="requirements-filter-banner" style="display:none;">
+                <i class="fa fa-filter"></i>
+                <span class="requirements-filter-text"></span>
+                <button type="button" id="clearRequirementsFilter" class="btn btn-xs btn-outline-secondary ml-auto">
+                    <i class="fa fa-times"></i> {{trans('fitting::fitting.requirements_filter_clear')}}
+                </button>
+            </div>
+
             <div class="skill-check-tabs">
                 <button type="button" class="skill-check-tab is-active req-tab" data-tier="minimum">
                     {{trans('fitting::fitting.tab_entry_label')}}

@@ -277,11 +277,15 @@
                 const t = (result.totalsByFittingId || {})[f.id] || {minimum: 0, advanced: 0};
                 const minPct = totalChars > 0 ? Math.round((t.minimum / totalChars) * 100) : 0;
                 const advPct = totalChars > 0 ? Math.round((t.advanced / totalChars) * 100) : 0;
-                return `<div class="report-totals-cell">
-                    <div class="report-totals-cell-title">${reportEscape(f.name)}</div>
-                    <div class="report-totals-cell-sub text-muted">${reportEscape(f.shipType || '')}</div>
-                    <div class="mt-1"><span class="status-pill is-entry">${reportEscape(reportI18n.statusEntry)} · ${t.minimum}/${totalChars} (${minPct}%)</span></div>
-                    <div class="mt-1"><span class="status-pill is-advanced">${reportEscape(reportI18n.statusAdvanced)} · ${t.advanced}/${totalChars} (${advPct}%)</span></div>
+                return `<div class="report-totals-cell report-totals-cell--split">
+                    <div class="report-totals-cell-info">
+                        <div class="report-totals-cell-title">${reportEscape(f.name)}</div>
+                        <div class="report-totals-cell-sub text-muted">${reportEscape(f.shipType || '')}</div>
+                    </div>
+                    <div class="report-totals-cell-stats">
+                        <span class="status-pill is-entry">${reportEscape(reportI18n.statusEntry)} · ${t.minimum}/${totalChars} (${minPct}%)</span>
+                        <span class="status-pill is-advanced">${reportEscape(reportI18n.statusAdvanced)} · ${t.advanced}/${totalChars} (${advPct}%)</span>
+                    </div>
                 </div>`;
             }).join('');
             $('#reportTotalsSummary').html(`
