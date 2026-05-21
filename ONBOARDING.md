@@ -1,6 +1,6 @@
 # ONBOARDING — akinams053/seat-fitting
 
-交接快照日期：2026-05-21。本仓库当前已发布到 `1.7.1`；工作区干净。
+交接快照日期：2026-05-22。本仓库当前准备发布到 `1.8.0`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
 
 这份文档让下一位接手者在 5 分钟内建立全局上下文；更底层的架构和命令约定在 `CLAUDE.md`。
 
@@ -21,7 +21,7 @@
 - **个人配装检查**：成员检查自己的角色能否驾驶某 fit。1.6.0 起树上每个 fit 行带 `doctrine_id` context —— 点 D 树下的 F = 在 D context 里检查 F，避免跨组串读。
 - **配装及技能管理**（旧名「配装录入」，1.3.0 重命名）：管理员维护配装本身、技能要求、复制/重命名 fit。1.4.0 起去掉了 EFT 文本显示卡和方案管理 UI。
 - **军团技能检查**：1.6.0 起改成「doctrine 必选 + fit 可选筛选」单一表单，避免 doctrine/fit 二选一 radio 的歧义。
-- **舰队审查**：仅占位，未实现。
+- **舰队技能审查（1.8.0 起）**：使用当前 SeAT 账号下具备 `esi-fleets.read_fleet.v1` 且正在舰队中的角色自动读取当前舰队；按配装分组 / 可选单 fit 检查技能，并按舰船/配装统计未达标、入门、进阶、未审查与手工录入的 DPS/DPH。
 
 不要把 namespace / route name / DB 前缀改成 `akinams053`：为兼容上游安装，它们必须保留 `CryptaTech\Seat\Fitting\`、`cryptafitting::*`、`crypta_tech_seat_*`。Composer 包名 (`akinams053/seat-fitting`) 和 PSR-4 namespace **故意**不一致。
 
@@ -32,15 +32,15 @@
 | 项目 | 值 |
 |---|---|
 | 当前分支 | `master`，与 `origin/master` 一致 |
-| 最新提交 | `d379446 feat: auto-raise advanced level to minimum so the two tiers never invert` |
-| 最新 tag | `1.7.1`（已 push） |
-| Packagist | `1.7.1`（webhook 同步约 30 秒） |
-| 本地工作区 | 干净 |
+| 最新提交 | `1de09df feat: add fleet damage totals` |
+| 最新 tag | `1.8.0`（本次正式发布） |
+| Packagist | `1.8.0`（push tag 后 webhook 同步约 30 秒） |
+| 本地工作区 | `.gitignore` / `.claude/` 有未纳入发布的本地状态 |
 
 标签轨迹（按发布顺序）：
 ```
 v1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.2.1 → 1.2.2 → 1.2.3 → 1.2.4 → 1.2.5 →
-1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1
+1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0
 ```
 
 **1.5.0 有 migration bug**（drop UNIQUE 被 FK 挡住），后续靠 1.5.1 的幂等 migration 修。从 1.5.0 起任何升级都跳到 1.5.1+。生产部署必须用 ≥1.5.1。
@@ -97,11 +97,11 @@ PHP：composer.json 不声明 `require.php`；CI 锁 PHP 8.3；测试服跑 PHP 
 | `fitting.doctrineview` | ✅ 配装分组视图 | |
 | `fitting.reportview` | ✅ 军团技能检查 | |
 | `fitting.lock_doctrine` | ✅ 锁定/解锁分组（1.7.0 新增） | 独立权限：可被任何用户独立授予 |
+| `fitting.fleet_review` | ✅ 舰队技能审查（1.8.0 新增） | 使用 SeAT SSO / RefreshToken 读取 ESI fleet |
 | `fitting.manage` | ❌ 未接入 | 预留 |
 | `fitting.corporation_report` | ❌ 未接入 | 预留 |
-| `fitting.fleet_review` | ❌ 未接入 | 预留（功能本身也未实现） |
 
-后 3 个是历史预留位。本期没动它们。
+`fitting.manage` / `fitting.corporation_report` 是历史预留位。
 
 ---
 
@@ -136,12 +136,14 @@ src/
 │   ├── CharacterSkillSnapshotService.php   # 按需加载角色技能（减内存）
 │   ├── SkillPlanParser.php                 # 解析 EVE 方案文本
 │   ├── PersonalSkillCheckService.php       # 入口：effectiveRequirementsForTier + normalizeAdvancedAgainstMinimum
-│   └── CorporationSkillReportService.php   # 按 SeAT 账号聚合
+│   ├── CorporationSkillReportService.php   # 按 SeAT 账号聚合
+│   ├── FleetEsiService.php                 # 使用 SeAT RefreshToken 自动读取当前舰队
+│   └── FleetSkillReviewService.php         # 舰队成员技能审查 + 舰船/火力统计
 ├── Helpers/CalculateConstants.php
 ├── Commands/UpgradeFits.php
 ├── Validation/
 ├── Events/                         # FittingUpdated, DoctrineUpdated
-├── database/migrations/            # 6 个迁移
+├── database/migrations/            # 9 个迁移
 └── resources/
     ├── views/                      # fitting / doctrine / doctrinereport + includes/
     │   └── includes/
@@ -167,6 +169,7 @@ src/
 2026_05_25_000000_create_crypta_tech_seat_fitting_skill_plans.php
 2026_05_25_010000_add_scope_doctrine_id_to_plan_attachments.php   # 1.5.1 起幂等版
 2026_05_25_020000_add_is_locked_to_crypta_tech_seat_fitting_doctrine.php   # 1.7.0
+2026_05_25_030000_add_damage_metrics_to_fittings.php   # 1.8.0，minimum/advanced DPS/DPH
 ```
 
 所有 migration 必须**幂等**（MySQL ALTER 非事务）。drop 索引前若它覆盖了 FK 列要先加单列补位索引。详见 `CLAUDE.md` 末尾的「migration 守则」段。
@@ -287,6 +290,7 @@ effective[tier] = base
 | `1.6.1` | Sortable `put: true` → 严格白名单，修 plan 拖进 fit 列表变 fit 的串泄 |
 | `1.7.0` | **配装分组 lock**（is_locked + `fitting.lock_doctrine` 权限 + 9 个端点守门 + UI 适配） |
 | `1.7.1` | **进阶 ≥ 入门 自动 normalize**（编辑器下拉过滤 + 保存时抬高 + 检查时抬高） |
+| `1.8.0` | **舰队技能审查正式上线**：SeAT SSO 自动识别当前舰队、配装 DPS/DPH 录入、按舰船/配装统计合格人数与整队 DPS/DPH，未匹配舰船单列“未进行审查” |
 
 ### 当前 UI 语义约束（必须保留）
 
@@ -306,14 +310,14 @@ effective[tier] = base
 
 通过 `scripts/ssh-seat -t test 'cmd'` 操作。
 
-| 项目 | 值（截至 2026-05-21 1.7.1 部署后） |
+| 项目 | 值（截至 2026-05-22 1.8.0 测试服部署后） |
 |---|---|
 | SeAT 路径 | `/var/www/seat` |
 | 插件路径 | `/var/www/seat/vendor/akinams053/seat-fitting` |
 | Web URL | `http://ylxh.de` |
 | APP_ENV | `local`，APP_DEBUG enabled |
 | PHP | `8.4.21` |
-| composer 装的插件版本 | `akinams053/seat-fitting 1.7.1` |
+| composer 装的插件版本 | `akinams053/seat-fitting dev-master 1de09df`（正式 tag 后可切到 `1.8.0`） |
 | `FITTING_BYPASS_PERMISSIONS` | `true`（任何登录用户都能看 UI、也能 lock 分组）|
 
 认证方式：`.creds.test` 第 4 行写 `scripts/test.key`，`ssh_seat.py` 见 `/` 自动走 key 认证。换机器要同步 `.creds.test` + `scripts/test.key` 并 `chmod 600`。
@@ -355,7 +359,7 @@ scripts/ssh-seat -t test 'cd /var/www/seat && \
   ```
   应是 `(unset = safe default)` 或 `=false`。看到 `=true` 立刻提醒并问要不要改
 - **1.5.0 的 migration 有 bug** —— 任何生产升级必须用 ≥1.5.1（1.5.1 是幂等版的同一个 migration）
-- 1.3.0 / 1.5.0 / 1.7.0 都引入新表或新列，对应升级**必须跑 `php artisan migrate`**
+- 1.3.0 / 1.5.0 / 1.7.0 / 1.8.0 都引入新表或新列，对应升级**必须跑 `php artisan migrate`**
 - 如果生产仍装的是上游 `cryptatech/seat-fitting`，要先评估替换路径和数据保留（namespace、DB 前缀、route name 全部沿用上游正是为了这种切换）。**不要**直接 `composer remove cryptatech/seat-fitting`，除非用户明确确认
 - 读类命令（`composer show` / `route:list` / `migrate:status`）可直接跑
 
@@ -393,7 +397,7 @@ scripts/ssh-seat -t test 'cd /var/www/seat && \
 
 ## 13. 已知未完成 / 后续候选方向
 
-- **舰队审查（fleet review）**：`fitting.fleet_review` 权限只声明、无路由、无控制器、无视图
+- **舰队审查进一步增强**：当前按成员当前 hull 匹配配装，不能证明成员实际 fitting 完全一致；DPS/DPH 是管理员手工录入，不从 EFT 自动解析。
 - **预留权限**：`fitting.manage` 和 `fitting.corporation_report` 仅声明、未接入。要么把现有路由迁过去做更细粒度的访问控制，要么从权限文件删掉
 - **composer.json 不锁 PHP 版本**：见 §3
 - **`composer.lock` 不进 git**（`.gitignore` 已盖住）——这是 SeAT 插件惯例

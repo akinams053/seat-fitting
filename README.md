@@ -29,6 +29,13 @@ If using a docker installation see https://eveseat.github.io/docs/admin_guides/d
 
 Use the package name `akinams053/seat-fitting`. After install, a **Fittings** link will appear in the SeAT left sidebar.
 
+## Downstream features · 本 fork 功能
+
+- Personal, corporation, and fleet skill checks for maintained fittings and fitting groups.
+- Baseline / advanced skill requirements with auxiliary skill plans and per-group context isolation.
+- Fleet review uses SeAT-stored SSO authorisations with `esi-fleets.read_fleet.v1` to detect the current fleet automatically; it does not store external Bearer tokens.
+- Optional baseline / advanced DPS and DPH metrics can be recorded per fitting and are aggregated in fleet review by matched ship/fitting.
+
 ## Credits · 致谢
 
 This fork stands entirely on the work of the upstream authors:
