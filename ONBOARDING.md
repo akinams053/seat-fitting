@@ -1,6 +1,6 @@
 # ONBOARDING — akinams053/seat-fitting
 
-交接快照日期：2026-05-22。本仓库当前准备发布到 `1.8.0`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
+交接快照日期：2026-05-22。本仓库当前准备发布到 `1.8.1`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
 
 这份文档让下一位接手者在 5 分钟内建立全局上下文；更底层的架构和命令约定在 `CLAUDE.md`。
 
@@ -32,15 +32,15 @@
 | 项目 | 值 |
 |---|---|
 | 当前分支 | `master`，与 `origin/master` 一致 |
-| 最新提交 | `1de09df feat: add fleet damage totals` |
-| 最新 tag | `1.8.0`（本次正式发布） |
-| Packagist | `1.8.0`（push tag 后 webhook 同步约 30 秒） |
+| 最新提交 | `1.8.1` hotfix 提交 |
+| 最新 tag | `1.8.1`（1.8.0 的生产迁移兼容性 hotfix） |
+| Packagist | `1.8.1`（push tag 后 webhook 同步约 30 秒） |
 | 本地工作区 | `.gitignore` / `.claude/` 有未纳入发布的本地状态 |
 
 标签轨迹（按发布顺序）：
 ```
 v1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.2.1 → 1.2.2 → 1.2.3 → 1.2.4 → 1.2.5 →
-1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0
+1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1
 ```
 
 **1.5.0 有 migration bug**（drop UNIQUE 被 FK 挡住），后续靠 1.5.1 的幂等 migration 修。从 1.5.0 起任何升级都跳到 1.5.1+。生产部署必须用 ≥1.5.1。
@@ -291,6 +291,7 @@ effective[tier] = base
 | `1.7.0` | **配装分组 lock**（is_locked + `fitting.lock_doctrine` 权限 + 9 个端点守门 + UI 适配） |
 | `1.7.1` | **进阶 ≥ 入门 自动 normalize**（编辑器下拉过滤 + 保存时抬高 + 检查时抬高） |
 | `1.8.0` | **舰队技能审查正式上线**：SeAT SSO 自动识别当前舰队、配装 DPS/DPH 录入、按舰船/配装统计合格人数与整队 DPS/DPH，未匹配舰船单列“未进行审查” |
+| `1.8.1` | **生产迁移兼容性 hotfix**：移除 `SHOW INDEX ... ORDER BY` 写法，兼容生产 MariaDB 的 `SHOW INDEX` 语法 |
 
 ### 当前 UI 语义约束（必须保留）
 
@@ -310,14 +311,14 @@ effective[tier] = base
 
 通过 `scripts/ssh-seat -t test 'cmd'` 操作。
 
-| 项目 | 值（截至 2026-05-22 1.8.0 测试服部署后） |
+| 项目 | 值（截至 2026-05-22 1.8.1 hotfix 前，1.8.0 测试服部署后） |
 |---|---|
 | SeAT 路径 | `/var/www/seat` |
 | 插件路径 | `/var/www/seat/vendor/akinams053/seat-fitting` |
 | Web URL | `http://ylxh.de` |
 | APP_ENV | `local`，APP_DEBUG enabled |
 | PHP | `8.4.21` |
-| composer 装的插件版本 | `akinams053/seat-fitting dev-master 1de09df`（正式 tag 后可切到 `1.8.0`） |
+| composer 装的插件版本 | `akinams053/seat-fitting dev-master 1de09df`（正式 tag 后可切到 `1.8.1`） |
 | `FITTING_BYPASS_PERMISSIONS` | `true`（任何登录用户都能看 UI、也能 lock 分组）|
 
 认证方式：`.creds.test` 第 4 行写 `scripts/test.key`，`ssh_seat.py` 见 `/` 自动走 key 认证。换机器要同步 `.creds.test` + `scripts/test.key` 并 `chmod 600`。

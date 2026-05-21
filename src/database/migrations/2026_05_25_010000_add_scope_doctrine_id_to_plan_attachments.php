@@ -97,8 +97,12 @@ return new class extends Migration
 
     private function uniqueCoversFourColumns(string $table, string $indexName): bool
     {
-        $rows = DB::select("SHOW INDEX FROM `$table` WHERE Key_name = ? ORDER BY Seq_in_index", [$indexName]);
+        $rows = collect(DB::select("SHOW INDEX FROM `$table` WHERE Key_name = ?", [$indexName]))
+            ->sortBy('Seq_in_index')
+            ->pluck('Column_name')
+            ->values()
+            ->all();
 
-        return count($rows) === 4;
+        return $rows === ['plan_id', 'attachable_type', 'attachable_id', 'scope_doctrine_id'];
     }
 };
