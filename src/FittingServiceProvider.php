@@ -2,6 +2,7 @@
 
 namespace CryptaTech\Seat\Fitting;
 
+use CryptaTech\Seat\Fitting\Commands\ImportTranslations;
 use CryptaTech\Seat\Fitting\Commands\UpgradeFits;
 use Illuminate\Support\Facades\Gate;
 use Seat\Services\AbstractSeatPlugin;
@@ -77,6 +78,7 @@ class FittingServiceProvider extends AbstractSeatPlugin
     {
         $this->commands([
             UpgradeFits::class,
+            ImportTranslations::class,
         ]);
     }
 
