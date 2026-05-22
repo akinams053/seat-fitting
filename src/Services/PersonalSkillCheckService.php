@@ -14,6 +14,7 @@ class PersonalSkillCheckService
     public function __construct(
         private SkillRequirementCalculator $calculator,
         private CharacterSkillSnapshotService $characters,
+        private LocalizationService $localization,
     ) {}
 
     public function checkForCurrentUser(Fitting $fitting, ?int $contextDoctrineId = null): array
@@ -56,7 +57,7 @@ class PersonalSkillCheckService
             $fittingResults[] = [
                 'id' => $fitting->fitting_id,
                 'name' => $fitting->name,
-                'shipType' => $fitting->ship->typeName,
+                'shipType' => $this->localization->typeName($fitting->ship_type_id, $fitting->ship->typeName),
                 'typeID' => $fitting->ship_type_id,
                 'requirements' => [
                     FittingSkillRequirement::TIER_MINIMUM => $minimum,
@@ -145,7 +146,7 @@ class PersonalSkillCheckService
                 ->get()
                 ->keyBy('typeID');
 
-            return $calculated
+            $result = $calculated
                 ->map(function ($skill) use ($tier, $skills) {
                     $type = $skills->get($skill['typeId']);
 
@@ -163,9 +164,14 @@ class PersonalSkillCheckService
                 })
                 ->values()
                 ->all();
+            /* typeName here already comes from calculator (which localizes in formatSkills);
+               groupName still needs swapping since we attached it from InvGroup directly. */
+            $this->localization->applyGroupNames($result);
+
+            return $result;
         }
 
-        return $requirements
+        $result = $requirements
             ->map(function (FittingSkillRequirement $requirement) {
                 return [
                     'id' => $requirement->id,
@@ -179,9 +185,13 @@ class PersonalSkillCheckService
                     'notes' => $requirement->notes,
                 ];
             })
-            ->sortBy('typeName')
             ->values()
             ->all();
+        $this->localization->applyTypeNames($result);
+        $this->localization->applyGroupNames($result);
+        $this->localization->sortByLocalizedName($result);
+
+        return $result;
     }
 
     private function mergePlanItems(Fitting $fitting, string $tier, array $baseRequirements, ?int $contextDoctrineId): array
@@ -236,7 +246,9 @@ class PersonalSkillCheckService
         }
 
         $result = array_values($byTypeId);
-        usort($result, fn ($a, $b) => strcasecmp($a['typeName'] ?? '', $b['typeName'] ?? ''));
+        $this->localization->applyTypeNames($result);
+        $this->localization->applyGroupNames($result);
+        $this->localization->sortByLocalizedName($result);
 
         return $result;
     }
@@ -373,17 +385,20 @@ class PersonalSkillCheckService
 
     private function planSummaryShape(FittingSkillPlan $plan, string $via, ?string $viaName): array
     {
+        $items = $plan->items->map(fn ($item) => [
+            'type_id' => (int) $item->skill_type_id,
+            'type_name' => $item->skill->typeName ?? '',
+            'level' => (int) $item->level,
+        ])->values()->all();
+        $this->localization->applyTypeNames($items, 'type_id', 'type_name');
+
         return [
             'id' => $plan->id,
             'name' => $plan->name,
             'tier' => $plan->tier,
             'via' => $via,
             'via_name' => $viaName,
-            'items' => $plan->items->map(fn ($item) => [
-                'type_id' => (int) $item->skill_type_id,
-                'type_name' => $item->skill->typeName ?? '',
-                'level' => (int) $item->level,
-            ])->values()->all(),
+            'items' => $items,
         ];
     }
 }

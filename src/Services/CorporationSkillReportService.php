@@ -15,6 +15,7 @@ class CorporationSkillReportService
         private SkillRequirementCalculator $calculator,
         private CharacterSkillSnapshotService $characters,
         private PersonalSkillCheckService $personalSkillCheck,
+        private LocalizationService $localization,
     ) {}
 
     public function run(array $allianceIds, array $corporationIds, int $doctrineId): array
@@ -97,7 +98,7 @@ class CorporationSkillReportService
             $data['fittingDetails'][] = [
                 'id' => $fittingId,
                 'name' => $fitting->name,
-                'shipType' => $fitting->ship->typeName,
+                'shipType' => $this->localization->typeName($fitting->ship_type_id, $fitting->ship->typeName),
             ];
             $data['totals'][$fitting->name] = [
                 'ship' => 0,

@@ -17,6 +17,7 @@ class FleetSkillReviewService
         private SkillRequirementCalculator $calculator,
         private CharacterSkillSnapshotService $characters,
         private PersonalSkillCheckService $personalSkillCheck,
+        private LocalizationService $localization,
     ) {}
 
     public function run(int $doctrineId, ?int $fittingId = null): array
@@ -196,14 +197,16 @@ class FleetSkillReviewService
 
     private function baseRow(array $member, ?CharacterInfo $character, ?InvType $ship, array $check): array
     {
+        $shipTypeId = (int) $member['ship_type_id'];
+
         return array_merge([
             'character_id' => (int) $member['character_id'],
             'character_name' => $character?->name ?? '#'.$member['character_id'],
             'nickname' => $character?->title ?? '',
             'role' => $member['role'],
             'role_name' => $member['role_name'] ?: $member['role'],
-            'ship_type_id' => (int) $member['ship_type_id'],
-            'ship_type' => $ship?->typeName ?? '#'.$member['ship_type_id'],
+            'ship_type_id' => $shipTypeId,
+            'ship_type' => $this->localization->typeName($shipTypeId, $ship?->typeName ?? '#'.$shipTypeId),
         ], $check);
     }
 
@@ -224,7 +227,10 @@ class FleetSkillReviewService
 
             $reviewed[] = [
                 'ship_type_id' => (int) $fitting->ship_type_id,
-                'ship_type' => $fitting->ship?->typeName ?? '#'.$fitting->ship_type_id,
+                'ship_type' => $this->localization->typeName(
+                    (int) $fitting->ship_type_id,
+                    $fitting->ship?->typeName ?? '#'.$fitting->ship_type_id
+                ),
                 'fitting_id' => (int) $fitting->fitting_id,
                 'fitting_name' => $fitting->name,
                 'failed' => $failed,
@@ -250,7 +256,7 @@ class FleetSkillReviewService
 
                 return [
                     'ship_type_id' => $shipTypeId,
-                    'ship_type' => $ship?->typeName ?? '#'.$shipTypeId,
+                    'ship_type' => $this->localization->typeName($shipTypeId, $ship?->typeName ?? '#'.$shipTypeId),
                     'members' => $shipMembers->count(),
                 ];
             })

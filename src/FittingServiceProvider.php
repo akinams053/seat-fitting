@@ -4,6 +4,7 @@ namespace CryptaTech\Seat\Fitting;
 
 use CryptaTech\Seat\Fitting\Commands\ImportTranslations;
 use CryptaTech\Seat\Fitting\Commands\UpgradeFits;
+use CryptaTech\Seat\Fitting\Services\LocalizationService;
 use Illuminate\Support\Facades\Gate;
 use Seat\Services\AbstractSeatPlugin;
 
@@ -116,6 +117,11 @@ class FittingServiceProvider extends AbstractSeatPlugin
             __DIR__.'/Config/Permissions/fitting.permissions.php',
             'fitting'
         );
+
+        /* Singleton so the per-request name-lookup cache is shared across every service
+           that gets it injected — otherwise each constructor gets its own empty cache
+           and the same type_id ends up hitting the DB N times per request. */
+        $this->app->singleton(LocalizationService::class);
     }
 
     private function addMigrations()

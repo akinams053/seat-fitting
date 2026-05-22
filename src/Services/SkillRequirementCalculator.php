@@ -10,6 +10,8 @@ use Seat\Eveapi\Models\Sde\InvType;
 
 class SkillRequirementCalculator implements CalculateConstants
 {
+    public function __construct(private LocalizationService $localization) {}
+
     public function calculateForFitting(Fitting $fitting): array
     {
         $types = collect($fitting->fitItems->all())
@@ -54,9 +56,8 @@ class SkillRequirementCalculator implements CalculateConstants
             ];
         }
 
-        usort($formatted, function ($left, $right) {
-            return strcmp($left['typeName'], $right['typeName']);
-        });
+        $this->localization->applyTypeNames($formatted);
+        $this->localization->sortByLocalizedName($formatted);
 
         return $formatted;
     }

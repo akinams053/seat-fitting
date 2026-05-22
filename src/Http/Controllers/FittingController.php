@@ -11,8 +11,10 @@ use CryptaTech\Seat\Fitting\Models\FittingSkillPlan;
 use CryptaTech\Seat\Fitting\Models\FittingSkillPlanAttachment;
 use CryptaTech\Seat\Fitting\Models\FittingSkillPlanItem;
 use CryptaTech\Seat\Fitting\Models\FittingSkillRequirement;
+use CryptaTech\Seat\Fitting\Models\Translation;
 use CryptaTech\Seat\Fitting\Services\CorporationSkillReportService;
 use CryptaTech\Seat\Fitting\Services\FleetSkillReviewService;
+use CryptaTech\Seat\Fitting\Services\LocalizationService;
 use CryptaTech\Seat\Fitting\Services\PersonalSkillCheckService;
 use CryptaTech\Seat\Fitting\Services\SkillPlanParser;
 use CryptaTech\Seat\Fitting\Services\SkillRequirementCalculator;
@@ -37,6 +39,7 @@ class FittingController extends Controller
         private CorporationSkillReportService $corporationSkillReport,
         private FleetSkillReviewService $fleetSkillReview,
         private SkillPlanParser $skillPlanParser,
+        private LocalizationService $localization,
     ) {}
 
     public function getDoctrineEdit($doctrine_id)
@@ -55,7 +58,7 @@ class FittingController extends Controller
         foreach ($fittings as $fitting) {
             $entry = [
                 'id' => $fitting->fitting_id,
-                'shiptype' => $fitting->ship->typeName,
+                'shiptype' => $this->localization->typeName((int) $fitting->ship_type_id, $fitting->ship->typeName),
                 'fitname' => $fitting->name,
                 'typeID' => $fitting->ship->typeID,
             ];
@@ -107,7 +110,7 @@ class FittingController extends Controller
             array_push($fitting_list, [
                 'id' => $fitting->fitting_id,
                 'name' => $fitting->name,
-                'shipType' => $fitting->ship->typeName,
+                'shipType' => $this->localization->typeName((int) $fitting->ship_type_id, $fitting->ship->typeName),
                 'shipImg' => $ship->typeID,
             ]);
         }
@@ -182,7 +185,7 @@ class FittingController extends Controller
         foreach ($fittings as $fit) {
             array_push($fitnames, [
                 'id' => $fit->fitting_id,
-                'shiptype' => $fit->ship->typeName,
+                'shiptype' => $this->localization->typeName((int) $fit->ship_type_id, $fit->ship->typeName),
                 'fitname' => $fit->name,
                 'typeID' => $fit->ship_type_id,
             ]);
@@ -200,7 +203,7 @@ class FittingController extends Controller
             $fittingPayloads[$fit->fitting_id] = [
                 'id' => $fit->fitting_id,
                 'name' => $fit->name,
-                'shipType' => $fit->ship?->typeName,
+                'shipType' => $this->localization->typeName((int) $fit->ship_type_id, $fit->ship?->typeName),
                 'typeID' => $fit->ship_type_id,
             ];
         }
@@ -357,6 +360,8 @@ class FittingController extends Controller
     {
         $jsfit = [];
 
+        /* `eft` is the canonical English export (EVE client expects English typeNames in
+           the round-trip); ship/item display names below are localized in a final pass. */
         $jsfit['eft'] = $fit->toEve();
         $jsfit['shipname'] = $fit->ship->typeName;
         $jsfit['fitname'] = $fit->name;
@@ -390,7 +395,51 @@ class FittingController extends Controller
 
         }
 
+        $this->localizeFittingParserResult($fit, $jsfit);
+
         return $jsfit;
+    }
+
+    /**
+     * Single batch lookup for all type IDs referenced by a fit detail payload
+     * (ship + every item across slot / drone / cargo). Substitutes localized
+     * names in place; missing translations leave the English fallback intact.
+     */
+    private function localizeFittingParserResult($fit, array &$jsfit): void
+    {
+        if (! $this->localization->shouldLocalize()) {
+            return;
+        }
+        $typeIds = [(int) $fit->ship_type_id];
+        foreach ($fit->items as $item) {
+            $typeIds[] = (int) $item->type_id;
+        }
+        $names = $this->localization->typeNames(array_unique($typeIds));
+        if (empty($names)) {
+            return;
+        }
+
+        $shipId = (int) $fit->ship_type_id;
+        if (isset($names[$shipId])) {
+            $jsfit['shipname'] = $names[$shipId];
+        }
+        foreach ($jsfit['dronebay'] as $tid => $_v) {
+            if (isset($names[(int) $tid])) {
+                $jsfit['dronebay'][$tid]['name'] = $names[(int) $tid];
+            }
+        }
+        foreach ($jsfit['cargo'] as $tid => $_v) {
+            if (isset($names[(int) $tid])) {
+                $jsfit['cargo'][$tid]['name'] = $names[(int) $tid];
+            }
+        }
+        /* Slot entries are keyed by flagName (e.g. "HiSlot0"), not by type_id.
+           Sweep the top level for any {id, name} shape and swap by id. */
+        foreach ($jsfit as $key => $val) {
+            if (is_array($val) && isset($val['id'], $val['name']) && isset($names[(int) $val['id']])) {
+                $jsfit[$key]['name'] = $names[(int) $val['id']];
+            }
+        }
     }
 
     private function damageMetrics(Fitting $fitting): array
@@ -437,9 +486,18 @@ class FittingController extends Controller
                     'id' => $group->groupID,
                     'text' => $group->groupName,
                     'name' => $group->groupName,
+                    /* Keep the id under the conventional key so applyGroupNames can find it. */
+                    'groupId' => $group->groupID,
                 ];
             })
-            ->values();
+            ->values()
+            ->all();
+
+        /* Swap groupName / text in-place with localized names where available, then re-sort
+           by the localized field for a coherent dropdown in zh-CN. */
+        $this->localization->applyGroupNames($groups, 'groupId', 'name');
+        $this->localization->applyGroupNames($groups, 'groupId', 'text');
+        $this->localization->sortByLocalizedName($groups, 'name');
 
         return response()->json($groups);
     }
@@ -452,6 +510,21 @@ class FittingController extends Controller
         ]);
 
         $term = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $request->input('q', ''));
+
+        /* For locales with translation data, the user may type in their own language;
+           pre-resolve those query-matching IDs and OR them into the English LIKE so
+           "护卫舰" finds skills with English names that don't contain "护卫". */
+        $localizedIds = [];
+        if ($term !== '' && $this->localization->shouldLocalize()) {
+            $localizedIds = Translation::query()
+                ->where('source', Translation::SOURCE_INV_TYPES)
+                ->where('locale', $this->localization->currentLocale())
+                ->where('name', 'like', "%{$term}%")
+                ->limit(200)
+                ->pluck('source_id')
+                ->all();
+        }
+
         $skills = InvType::where('published', true)
             ->whereHas('group', function ($group) {
                 $group->where('categoryID', InvGroup::SKILL_CATEGORY_ID)
@@ -460,8 +533,13 @@ class FittingController extends Controller
             ->when($request->filled('group_id'), function ($query) use ($request) {
                 $query->where('groupID', (int) $request->input('group_id'));
             })
-            ->when($term !== '', function ($query) use ($term) {
-                $query->where('typeName', 'like', "%{$term}%");
+            ->when($term !== '', function ($query) use ($term, $localizedIds) {
+                $query->where(function ($q) use ($term, $localizedIds) {
+                    $q->where('typeName', 'like', "%{$term}%");
+                    if (! empty($localizedIds)) {
+                        $q->orWhereIn('typeID', $localizedIds);
+                    }
+                });
             })
             ->orderBy('typeName')
             ->limit(50)
@@ -475,7 +553,13 @@ class FittingController extends Controller
                     'groupId' => $skill->groupID,
                 ];
             })
-            ->values();
+            ->values()
+            ->all();
+
+        /* Localize both `text` (Select2 shows this) and `typeName` (UI may use either). */
+        $this->localization->applyTypeNames($skills, 'typeId', 'typeName');
+        $this->localization->applyTypeNames($skills, 'typeId', 'text');
+        $this->localization->sortByLocalizedName($skills, 'text');
 
         return response()->json([
             'results' => $skills,
@@ -632,7 +716,7 @@ class FittingController extends Controller
         $pool = $fittings->map(fn ($f) => [
             'id' => $f->fitting_id,
             'name' => $f->name,
-            'shipType' => $f->ship?->typeName,
+            'shipType' => $this->localization->typeName((int) $f->ship_type_id, $f->ship?->typeName),
             'typeID' => $f->ship_type_id,
         ])->values();
 
@@ -648,7 +732,7 @@ class FittingController extends Controller
                 return [
                     'id' => $f->fitting_id,
                     'name' => $f->name,
-                    'shipType' => $f->ship?->typeName,
+                    'shipType' => $this->localization->typeName((int) $f->ship_type_id, $f->ship?->typeName),
                     'typeID' => $f->ship_type_id,
                     'plans' => $fitPlansInDoctrine($f->fitting_id, $d->id),
                 ];
@@ -799,7 +883,7 @@ class FittingController extends Controller
             return [$d->id => $d->fittings->map(fn ($f) => [
                 'id' => $f->fitting_id,
                 'name' => $f->name,
-                'shipType' => $f->ship?->typeName,
+                'shipType' => $this->localization->typeName((int) $f->ship_type_id, $f->ship?->typeName),
             ])->values()->all()];
         });
 
@@ -852,7 +936,7 @@ class FittingController extends Controller
             return [$d->id => $d->fittings->map(fn ($f) => [
                 'id' => $f->fitting_id,
                 'name' => $f->name,
-                'shipType' => $f->ship?->typeName,
+                'shipType' => $this->localization->typeName((int) $f->ship_type_id, $f->ship?->typeName),
             ])->values()->all()];
         });
 
@@ -1139,16 +1223,19 @@ class FittingController extends Controller
 
     private function planResponseShape(FittingSkillPlan $plan, array $attachments, array $extra = []): array
     {
+        $items = $plan->items->map(fn (FittingSkillPlanItem $item) => [
+            'type_id' => (int) $item->skill_type_id,
+            'type_name' => $item->skill->typeName ?? '',
+            'level' => (int) $item->level,
+        ])->values()->all();
+        $this->localization->applyTypeNames($items, 'type_id', 'type_name');
+
         return array_merge([
             'id' => $plan->id,
             'name' => $plan->name,
             'tier' => $plan->tier,
             'description' => $plan->description,
-            'items' => $plan->items->map(fn (FittingSkillPlanItem $item) => [
-                'type_id' => (int) $item->skill_type_id,
-                'type_name' => $item->skill->typeName ?? '',
-                'level' => (int) $item->level,
-            ])->values()->all(),
+            'items' => $items,
             'attachments' => $attachments,
         ], $extra);
     }
