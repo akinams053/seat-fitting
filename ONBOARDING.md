@@ -1,6 +1,6 @@
 # ONBOARDING — akinams053/seat-fitting
 
-交接快照日期：2026-05-22。本仓库当前准备发布到 `1.9.1`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
+交接快照日期：2026-05-22。本仓库当前准备发布到 `1.10.0`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
 
 这份文档让下一位接手者在 5 分钟内建立全局上下文；更底层的架构和命令约定在 `CLAUDE.md`。
 
@@ -32,15 +32,15 @@
 | 项目 | 值 |
 |---|---|
 | 当前分支 | `master`，与 `origin/master` 一致 |
-| 最新提交 | `1.9.1` 发布提交 |
-| 最新 tag | `1.9.1` |
-| Packagist | `1.9.1`（push tag 后 webhook 同步约 30 秒） |
+| 最新提交 | `1.10.0` 发布提交 |
+| 最新 tag | `1.10.0` |
+| Packagist | `1.10.0`（push tag 后 webhook 同步约 30 秒） |
 | 本地工作区 | `.gitignore` / `.claude/` 有未纳入发布的本地状态 |
 
 标签轨迹（按发布顺序）：
 ```
 v1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.2.1 → 1.2.2 → 1.2.3 → 1.2.4 → 1.2.5 →
-1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1 → 1.9.0 → 1.9.1
+1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1 → 1.9.0 → 1.9.1 → 1.10.0
 ```
 
 **1.5.0 有 migration bug**（drop UNIQUE 被 FK 挡住），后续靠 1.5.1 的幂等 migration 修。从 1.5.0 起任何升级都跳到 1.5.1+。生产部署必须用 ≥1.5.1。
@@ -294,12 +294,13 @@ effective[tier] = base
 | `1.8.1` | **生产迁移兼容性 hotfix**：移除 `SHOW INDEX ... ORDER BY` 写法，兼容生产 MariaDB 的 `SHOW INDEX` 语法 |
 | `1.9.0` | **舰队审查 UI 重做**（顶部 3 张概览卡 DPS/DPH/状态分布 + 按配装达标率单色蓝进度条列表 + 未审查筛选选项）；服务端 `totals` 多了 `theoretical_dps/dph`（按全员 minimum 基线）；军团检查合计卡改左右分栏更紧凑；军团比率改按 **SeAT 主账户** 维度而非 character 维度；舰队检查说明改成「检查人需登录舰队长 / DPS 按入门 / 不要按太快」并整段加粗；配装管理页 fit 详情标题右侧渲染 minimum/advanced × DPS/DPH 读出，未录入显 `—`；**点击装备过滤右侧 requirements editor**（新端点 GET `/fitting/item-skills/{typeId}`，复用 `SkillRequirementCalculator`） |
 | `1.9.1` | **修复 minimum 技能要求 source 误标 bug**：编辑器之前在保存时把所有 minimum 行强制写成 `source=manual`，导致一次「无改动保存」就让该 fit 的 minimum 全部失去自动同步能力——后续重导 EFT 时 `syncCalculatedMinimumRequirements` 会跳过这些行，模组升级后的技能门槛不会跟随刷新。现改为仅在用户真正修改 level（dropdown change 或经 add UI 更新已有行）时才把行从 `calculated` 翻成 `manual`；保存时按行实际 source 提交，未触碰的 calculated 行保持自动同步语义 |
+| `1.10.0` | **CCP 官方 zh-CN 本地化**：新表 `crypta_tech_seat_translations(source, source_id, locale, name)` + 仓库内 `src/database/translations/zh-CN.json`（2 MB，含 50173 types + 1552 groups + 47 categories + 2038 marketGroups，从 CCP Tranquility SDE 抽出）；新命令 `cryptatech:fittings:import-translations` 把 JSON bulk upsert 进表；新服务 `LocalizationService`（singleton 缓存 + applyTypeNames/applyGroupNames/sortByLocalizedName 帮手）。`SkillRequirementCalculator::formatSkills` / `PersonalSkillCheckService` / `CorporationSkillReportService` / `FleetSkillReviewService` / `FittingController` 全部出口在 zh-CN locale 下用中文显示舰船/技能/装备/组别名；`searchSkills` 同时按英文 LIKE 和翻译表 LIKE 检索，可中文搜索。**故意不动**：EFT 解析/导出、`SkillPlanParser`、按 `typeName` 字符串查找的 SQL（这些是规范名，必须保持英文）。脚本 `scripts/extract-sde-translations.py` 用于 SDE 更新时重新生成 JSON |
 
 ### 当前 UI 语义约束（必须保留）
 
 - 个人配装检查里，具体配装详情在**左侧**检查/录入卡片下方，不在右侧
 - 普通个人检查不把 EFT 文本作为主视图（1.4.0 起已去除 EFT 显示）
-- 技能名和技能分类用 EVE SDE 官方英文 `typeName` / `groupName`，**不机翻**
+- 技能名和技能分类用 EVE SDE 官方 `typeName` / `groupName`；zh-CN locale 走 `crypta_tech_seat_translations` 表（CCP 国际服官方汉化，**不机翻**），其它 locale 保持英文
 - 军团技能检查含「昵称」列，来源 `character_infos.title`
 - attached-plans 卡片始终在左侧（fit 详情下方），不在右侧
 - 分组检查时 attached-plans 块要 `.hide()` 避免残留误导
