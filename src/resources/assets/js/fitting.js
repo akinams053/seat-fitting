@@ -245,9 +245,15 @@ function initializeFittingPage() {
            should reopen the lower options in the dropdown. */
         if (isMinimum && typeId) refreshAdvancedRowFloor(typeId);
     });
-    /* Live re-filter the matching advanced dropdown when the user changes a minimum level. */
+    /* Live re-filter the matching advanced dropdown when the user changes a minimum level.
+       Also reclassify a calculated row as manual the moment the user edits its level, so the
+       row stops being auto-overwritten by syncCalculatedMinimumRequirements on re-imports. */
     $(document).on('change', '#minimumRequirementsBody .requirementLevel', function () {
-        const typeId = $(this).closest('tr').data('skill-type-id');
+        const row = $(this).closest('tr');
+        if (row.data('source') === 'calculated') {
+            row.attr('data-source', 'manual').data('source', 'manual');
+        }
+        const typeId = row.data('skill-type-id');
         if (typeId) refreshAdvancedRowFloor(typeId);
     });
     $(document).on('click', '#saveRequirements', saveRequirements);
@@ -1065,6 +1071,11 @@ function addRequirementToEditor(tier) {
     const existing = body.find(`tr[data-skill-type-id="${skill.typeId}"]`);
     if (existing.length) {
         existing.find('.requirementLevel').val(level);
+        /* Updating an existing calculated row via the add UI is the same intent as
+           editing the dropdown directly — reclassify so future re-imports leave it alone. */
+        if (existing.data('source') === 'calculated') {
+            existing.attr('data-source', 'manual').data('source', 'manual');
+        }
         if (tier === 'minimum') refreshAdvancedRowFloor(skill.typeId);
         return;
     }
@@ -1116,7 +1127,7 @@ function saveRequirements() {
         dataType: 'json',
         data: {
             _token: $('meta[name="csrf-token"]').attr('content'),
-            minimum: collectRequirements($('#minimumRequirementsBody'), 'manual'),
+            minimum: collectRequirements($('#minimumRequirementsBody')),
             advanced: collectRequirements($('#advancedRequirementsBody')),
         },
         timeout: 10000,

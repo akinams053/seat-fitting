@@ -1,6 +1,6 @@
 # ONBOARDING — akinams053/seat-fitting
 
-交接快照日期：2026-05-22。本仓库当前准备发布到 `1.9.0`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
+交接快照日期：2026-05-22。本仓库当前准备发布到 `1.9.1`；本地仍有未纳入发布的 `.gitignore` / `.claude/` 工作区状态。
 
 这份文档让下一位接手者在 5 分钟内建立全局上下文；更底层的架构和命令约定在 `CLAUDE.md`。
 
@@ -32,15 +32,15 @@
 | 项目 | 值 |
 |---|---|
 | 当前分支 | `master`，与 `origin/master` 一致 |
-| 最新提交 | `1.9.0` 发布提交 |
-| 最新 tag | `1.9.0` |
-| Packagist | `1.9.0`（push tag 后 webhook 同步约 30 秒） |
+| 最新提交 | `1.9.1` 发布提交 |
+| 最新 tag | `1.9.1` |
+| Packagist | `1.9.1`（push tag 后 webhook 同步约 30 秒） |
 | 本地工作区 | `.gitignore` / `.claude/` 有未纳入发布的本地状态 |
 
 标签轨迹（按发布顺序）：
 ```
 v1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.2.1 → 1.2.2 → 1.2.3 → 1.2.4 → 1.2.5 →
-1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1 → 1.9.0
+1.3.0 → 1.4.0 → 1.5.0 → 1.5.1 (migration hotfix) → 1.6.0 → 1.6.1 (Sortable fix) → 1.7.0 → 1.7.1 → 1.8.0 → 1.8.1 → 1.9.0 → 1.9.1
 ```
 
 **1.5.0 有 migration bug**（drop UNIQUE 被 FK 挡住），后续靠 1.5.1 的幂等 migration 修。从 1.5.0 起任何升级都跳到 1.5.1+。生产部署必须用 ≥1.5.1。
@@ -293,6 +293,7 @@ effective[tier] = base
 | `1.8.0` | **舰队技能审查正式上线**：SeAT SSO 自动识别当前舰队、配装 DPS/DPH 录入、按舰船/配装统计合格人数与整队 DPS/DPH，未匹配舰船单列“未进行审查” |
 | `1.8.1` | **生产迁移兼容性 hotfix**：移除 `SHOW INDEX ... ORDER BY` 写法，兼容生产 MariaDB 的 `SHOW INDEX` 语法 |
 | `1.9.0` | **舰队审查 UI 重做**（顶部 3 张概览卡 DPS/DPH/状态分布 + 按配装达标率单色蓝进度条列表 + 未审查筛选选项）；服务端 `totals` 多了 `theoretical_dps/dph`（按全员 minimum 基线）；军团检查合计卡改左右分栏更紧凑；军团比率改按 **SeAT 主账户** 维度而非 character 维度；舰队检查说明改成「检查人需登录舰队长 / DPS 按入门 / 不要按太快」并整段加粗；配装管理页 fit 详情标题右侧渲染 minimum/advanced × DPS/DPH 读出，未录入显 `—`；**点击装备过滤右侧 requirements editor**（新端点 GET `/fitting/item-skills/{typeId}`，复用 `SkillRequirementCalculator`） |
+| `1.9.1` | **修复 minimum 技能要求 source 误标 bug**：编辑器之前在保存时把所有 minimum 行强制写成 `source=manual`，导致一次「无改动保存」就让该 fit 的 minimum 全部失去自动同步能力——后续重导 EFT 时 `syncCalculatedMinimumRequirements` 会跳过这些行，模组升级后的技能门槛不会跟随刷新。现改为仅在用户真正修改 level（dropdown change 或经 add UI 更新已有行）时才把行从 `calculated` 翻成 `manual`；保存时按行实际 source 提交，未触碰的 calculated 行保持自动同步语义 |
 
 ### 当前 UI 语义约束（必须保留）
 
